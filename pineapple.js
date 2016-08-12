@@ -4,6 +4,14 @@
     return;
   }
 
+  var bonuses = {
+    p.tiers.Straight: 2,
+    p.tiers.Flush: 4,
+    p.tiers.FullHouse: 6,
+    p.tiers.FourOfAKind: 10,
+    p.tiers.StraightFlush: 15,
+    p.tiers.RoyalFlush: 25,
+  }
 
   function topBonus(hand) {
     var ret = 0;
@@ -18,8 +26,21 @@
   }
 
   function midBonus(hand) {
+    if (hand.tier in bonuses) {
+      return bonuses[hand.tier] * 2;
+    } else if (hand.tier == p.tiers.ThreeOfAKind) {
+      return 2;
+    } else {
+      return 0;
+    }
   }
+
   function botBonus(hand) {
+    if (hand.tier in bonuses) {
+      return bonuses[hand.tier];
+    } else {
+      return 0;
+    }
   }
 
   function legal(top_, mid, bot) {
@@ -28,6 +49,7 @@
 
   function scorePineapple(top_, mid, bot) {
     if (legal(top_, mid, bot)) {
+      return topBonus(top_) + midBonus(mid) + botBonus(bot);
     } else {
       return 0;
     }
