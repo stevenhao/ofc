@@ -28,8 +28,10 @@ G/*
     p.tiers[camel(name)] = tier;
     p[camel(name)] = function() {
       var kickerValue = 0;
+      var multipler = 1;
       Array.from(arguments).map(rankToNum).forEach(function(num) {
-        kickerValue = kickerValue * 100 + num;
+        kickerValue += multiplier * num;
+        multiplier *= 0.01;
       });
       return pokerHand(tier, kickerValue);
     }; // so we can say Flush(3)
