@@ -1,3 +1,35 @@
+function nop() {}
+function range(x, y) {
+  if (y == undefined) {
+    y = x;
+    x = 0;
+  }
+  var ret = [];
+  for (var i = x; i < y; i += 1) {
+    ret.push(i);
+  }
+  return ret;
+}
+
+Array.prototype.flatMap = function(lambda) { 
+    return Array.prototype.concat.apply([], this.map(lambda)); 
+};
+
+Array.prototype.shuffle = function() {
+    var j, x, i;
+    for (i = this.length; i; i--) {
+        j = Math.floor(Math.random() * i);
+        x = this[i - 1];
+        this[i - 1] = this[j];
+        this[j] = x;
+    }
+}
+
+Array.prototype.take = function(indices) {
+  return indices.map(function(idx) {
+    return this[idx];
+  }.bind(this));
+}
 /*
  * p.lookupTable: object with 6188 keys, mpas sorted-rank-strings to hands,
  * e.g. p.lookupTable['KK444'] = {name: 'Full House', tier: 6, kickerValue: 93}
@@ -6,7 +38,7 @@
  *
  * */
 (function() {
-  window.p = window.p || {};
+  p = {};
   p.tiers = {};
   p.handNames = ['High Card', 'Pair', 'Two Pair', 'Three of a Kind', 'Straight', 'Flush', 'Full House', 'Four of a Kind', 'Straight Flush', 'Royal Flush'];
   p.rankNames = { '2': 'Twos', '3': 'Threes', '4': 'Fours', '5': 'Fives', '6': 'Sixes', '7': 'Sevens', '8': 'Eights', '9': 'Nines', 'T': 'Tens', 'J': 'Jacks', 'Q': 'Queens', 'K': 'Kings', 'A': 'Aces', }
@@ -160,4 +192,182 @@
   p.numToRank = numToRank;
   p.rankToNum = rankToNum;
   p.getPluralStr = getPluralStr;
+})();
+(function() {
+  if (!p.getPokerHand) {
+    console.error("poker.js not included. pineapple.js will not run.");
+    return;
+  }
+
+  var bonuses = new Map([
+      [p.tiers.Straight, 2],
+      [p.tiers.Flush, 4],
+      [p.tiers.FullHouse, 6],
+      [p.tiers.FourOfAKind, 10],
+      [p.tiers.StraightFlush, 15],
+      [p.tiers.RoyalFlush, 25],
+    ])
+
+  function topBonus(hand) {
+    var ret = 0;
+    var value = Math.floor(hand.kickerValue); // this gives the main part of the hand (0-th kicker)
+    var rankName = p.getPluralStr(p.numToRank(value));
+    if (hand.tier == p.tiers.ThreeOfAKind) {
+      return {
+        name: 'Three of a Kind ' + rankName,
+        royalty: value + 8,
+      }
+    } else if (hand.tier == p.tiers.Pair && value >= 6) {
+      return {
+        name: rankName,
+        royalty: Math.max(0, value - 5),
+      }
+    } else {
+      return {
+        name: hand.name,
+        royalty: 0,
+      };
+    }
+  }
+
+  function midBonus(hand) {
+    var royalty = 0;
+    if (bonuses.has(hand.tier)) {
+      royalty = bonuses.get(hand.tier) * 2;
+    } else if (hand.tier == p.tiers.ThreeOfAKind) {
+      royalty = 2;
+    }
+
+    return { name: hand.name, royalty: royalty, }
+  }
+
+  function botBonus(hand) {
+    var royalty = 0;
+    if (bonuses.has(hand.tier)) {
+      royalty = bonuses.get(hand.tier);
+    }
+
+    return { name: hand.name, royalty: royalty, }
+  }
+
+  function legal(top_, mid, bot) {
+    return p.betterPokerHand(bot, mid) && p.betterPokerHand(mid, top_);
+  }
+
+  function scorePineapple(top_, mid, bot) {
+    if (legal(top_, mid, bot)) {
+      var a = topBonus(top_), b = midBonus(mid), c = botBonus(bot);
+      return a.royalty + b.royalty + c.royalty;
+    } else {
+      return 0;
+    }
+  }
+
+  p.scorePineapple = scorePineapple;
+  p.topBonus = topBonus;
+  p.midBonus = midBonus;
+  p.botBonus = botBonus;
+
+
+  function fillSuit(s) {
+    if (s.length == 1) {
+      s += 's';
+    }
+    return s;
+  }
+
+  p.ss = function(s) {
+    return p.getPokerHand(s.split(' ').map(fillSuit));
+  }
+})();
+(function() {
+  b = {};
+  function getBestPlay(cards) {
+    // try everything?
+    var mx = 0;
+    var trace = null;
+    function mskToCards(msk) {
+       return cards.take(range(14).filter(function(i) {
+          return msk & (1 << i);
+       }));
+    }
+
+    function mskToHand(msk) {
+      var cards = mskToCards(msk);
+      return p.getPokerHand(cards);
+    }
+
+    function check(_top, mid, bot) {
+      var score = p.scorePineapple(_top, mid, bot);
+      if (score > mx) {
+        mx = score;
+        trace = {_top, mid, bot};
+      }
+    }
+
+    function ppcnt(x) {
+      var ret = 0;
+      while (x) {
+        ret += 1;
+        x -= x & -x;
+      }
+      return ret;
+    }
+
+    console.log('getBestPlay: generating the guy!');
+    // generate the guy!
+    var steps = 0;
+    var bots = 0;
+    var n = 14;
+    for (var a = (1 << n) - 1; a > 0; a = (a - 1)) {
+      //if (steps > 1000) break;
+      if (ppcnt(a) == 5) {
+        var bot = mskToHand(a);
+        if (bot.tier <= 1) continue; // skip High card and pair
+        bots += 1;
+        var msk = ((1 << n) - 1) & (~a);
+        for (var b = (1 << n) - 1; b > 0; b = (b - 1) & msk) {
+          var mid = mskToHand(b);
+          steps += 1;
+          // ensure a & b == 0, i.e. bot, mid are disjoint
+          if (ppcnt(b) == 5) {
+            var msk2 = msk & (~b);
+            for (var c = (1 << n) - 1; c > 0; c = (c - 1) & msk2) {
+              steps += 1;
+              if (ppcnt(c) == 3) {
+                var _top = mskToHand(c);
+                check(_top, mid, bot);
+              }
+            }
+          }
+        }
+      }
+    }
+    console.log('total steps', {steps, bots});
+
+    return {royalty: mx, play: trace}
+  }
+
+
+  b.runTrial = function() {
+    var cards = p.getDeck().slice(0, 14);
+    console.log('runTrial: generated cards', {cards});
+    var bestPlay = b.getBestPlay(cards);
+    console.log('runTrial: gotBestPlay: ', bestPlay);
+    return bestPlay.royalty;
+  }
+  b.runTrials = function(n) {
+    n = n || 100;
+    var sum = 0;
+    var cnt = 0;
+    range(n).forEach(function(i) {
+      console.log('running trial ', i);
+      var outcm = b.runTrial();
+      sum += outcm;
+      cnt += 1;
+      console.log('current average: ', sum / cnt);
+    });
+  }
+
+  b.getBestPlay = getBestPlay;
 })();

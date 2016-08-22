@@ -1,0 +1,21 @@
+.rank-text {
+  font-family: 'Marker Felt', 'Comic Sans MS', 'Arial';
+  -webkit-user-select: none;
+}
+
+div.poker-card-slot {
+  width: 44px;
+  height: 55px;
+  /*outline: 1px #DDD solid;*/
+  display: inline-block;
+  box-shadow: 1pt 1pt 1pt 1pt #CCC;
+}
+
+body {
+  font-family: arial,sans-serif;
+}
+
+.poker-holder {
+  padding: 3px 3px 3px 3px;
+}
+
