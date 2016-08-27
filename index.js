@@ -158,6 +158,7 @@ pineapple.controller = function() {
 }
 
 pineapple.view = function(ctrl) {
+  window.ctrl = ctrl;
   function makeCard(card) {
     return d.draw(card);
   }
@@ -223,12 +224,6 @@ pineapple.view = function(ctrl) {
         ]),
       m('button', { onclick: ctrl.showBestPlay }, 'Show Best Play'),
       m('button', { onclick: ctrl.deal }, 'New'),
-      m('h2', 'Load'),
-      m('form', [
-          m('label', 'Enter Hand'),
-          m('input', { oninput: m.withAttr('value', ctrl.forms.hand) }, value: ctrl.forms.hand())
-          m("button[type=button]", {onclick: args.onsave.bind(this, contact)}, "Save")
-          ]),
       ]);
 }
 
@@ -236,3 +231,9 @@ m.module(document.getElementById('pineapple'), {
   controller: pineapple.controller,
   view: pineapple.view
 });
+
+
+window.setCards = function(s) {
+  ctrl.setCards(s.split(' '));
+  m.redraw(true);
+}
