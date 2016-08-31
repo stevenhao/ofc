@@ -128,15 +128,11 @@ void generateThree() {
       }
     }
   }
-  insert(STRAIGHT, vi({14, 2, 3, 4, 5}), vi({5}));
-  for(int i = 5; i <= 14; ++i) {
-    insert(STRAIGHT, vi({i==5 ? 14 : i-4, i-3, i-2, i-1, i}), vi({i}));
-  }
 }
 
 
 hand _hand(vector<card> cards) {
-  bool is_flush = true;
+  bool is_flush = cards.size() == 5;
   int hsh = 0;
   sort(cards.begin(), cards.end());
   vi ranks;

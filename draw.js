@@ -62,11 +62,12 @@
     return ret;
   }
 
-  function drawBack(w, h) {
+  function drawBack(w, h, fill) {
+    fill = fill || '#FFF';
     return m('rect', {
       width: w,
       height: h,
-      fill: '#FFF',
+      fill: fill,
     });
   }
 
@@ -91,14 +92,23 @@
   }
 
   function draw(card, showGrid) {
-    var rank = p.getRank(card), suit = p.getSuit(card);
-    var color = d.colors[suit];
-    return m('svg', {viewBox:'0 0 200 250'}, [
-      m('g', drawBack(200, 250)),
-      m('g', showGrid ? drawGrid(200, 250) : []),
-      m('g', {fill: color}, drawRank(rank)),
-      m('g', {fill: color}, drawSuit(suit)),
-      ]);
+    return m('svg', {viewBox:'0 0 200 250'}, function() {
+      var els = [];
+      if (card) {
+        els = els.concat([ m('g', drawBack(200, 250)) ]);
+        var rank = p.getRank(card), suit = p.getSuit(card);
+        var color = d.colors[suit];
+        els = els.concat([
+          m('g', showGrid ? drawGrid(200, 250) : []),
+          m('g', {fill: color}, drawRank(rank)),
+          m('g', {fill: color}, drawSuit(suit)),
+        ]);
+      } else {
+        console.log('draw blank');
+        els = els.concat([ m('g', drawBack(200, 250, '#4daf9c')) ]);
+      }
+      return els;
+    }());
   }
   d.draw = draw;
 })();

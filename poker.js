@@ -11,6 +11,7 @@
   p.handNames = ['High Card', 'Pair', 'Two Pair', 'Three of a Kind', 'Straight', 'Flush', 'Full House', 'Four of a Kind', 'Straight Flush', 'Royal Flush'];
   p.rankNames = { '2': 'Twos', '3': 'Threes', '4': 'Fours', '5': 'Fives', '6': 'Sixes', '7': 'Sevens', '8': 'Eights', '9': 'Nines', 'T': 'Tens', 'J': 'Jacks', 'Q': 'Queens', 'K': 'Kings', 'A': 'Aces', }
  
+
   function getPluralStr(rank) {
     return p.rankNames[rank];
   }
@@ -32,9 +33,18 @@
   }
   function numToRank(num) { return ('xA23456789TJQKA').charAt(num); }
   function rankToNum(rank) { return ('xx23456789TJQKA').indexOf(rank); }
-  function descendingRank(rnkA, rnkB) { return rankToNum(rnkB) - rankToNum(rnkA); }
+  function rankOrder(a, b) { return rankToNum(b) - rankToNum(a); }
+  function suitOrder(a, b) { return p.allSuits.indexOf(b) - p.allSuits.indexOf(a); }
   function getRank(card) { return card[0]; }
   function getSuit(card) { return card[1]; }
+  function byRank(cardA, cardB) {
+    if (getRank(cardA) == getRank(cardB)) return suitOrder(getSuit(cardA), getSuit(cardB));
+    return rankOrder(getRank(cardA), getRank(cardB));
+  }
+  function bySuit(cardA, cardB) {
+    if (getSuit(cardA) == getSuit(cardB)) return rankOrder(getRank(cardA), getRank(cardB));
+    return suitOrder(getSuit(cardA), getSuit(cardB));
+  }
   function lookupName(tier) { return p.handNames[tier]; }
   function pokerHand(tier, kickerValue) { return { name: lookupName(tier), tier: tier, kickerValue: kickerValue, } }
   function incompleteHand() { return { name: 'incomplete', tier: -1, kickerValue: -1, } }
@@ -64,7 +74,7 @@
   function makeLookupTable() { // takes ~100 ms on Intel i5-6600 3.30 GHz, Chrome 51.0
     var table = {};
     function yield(ranks, hand) {
-      var s = ranks.slice().sort(descendingRank).join('');
+      var s = ranks.slice().sort(rankOrder).join('');
       if (!(s in table) || betterPokerHand(hand, table[s])) {
         table[s] = hand;
       }
@@ -120,7 +130,7 @@
   p.lookupTable = makeLookupTable();
   function lookupHand(ranks) {
     var r = ranks.slice(); // copy it before modifying
-    r.sort(descendingRank);
+    r.sort(rankOrder);
     return p.lookupTable[r.join('')];
   }
 
@@ -137,7 +147,7 @@
 
     if (suits.join('') == suits[0].repeat(5)) { // we are in flush mode
       var r = ranks.slice();
-      r.sort(descendingRank);
+      r.sort(rankOrder);
       if (ret.tier == p.tiers.Straight) {
         if (ret.kickerValue == 14) {
           return p.RoyalFlush();
@@ -159,5 +169,7 @@
   p.getSuit = getSuit;
   p.numToRank = numToRank;
   p.rankToNum = rankToNum;
+  p.byRank = byRank;
+  p.bySuit = bySuit
   p.getPluralStr = getPluralStr;
 })();

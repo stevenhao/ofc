@@ -20,6 +20,10 @@ void disp(row r, string sep=" ") {
   cout << ")" << sep;
 }
 
+void disp(hand h, string sep = " ") {
+  cout << "(" << h.first << "," << h.second << ")" << sep;
+}
+
 void disp(board B, string sep=" ", string sep2 = "\n") {
   cout << "BOARD(";
   for (row r: B) {

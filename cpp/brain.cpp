@@ -1,6 +1,6 @@
 #include "pineapple.cpp"
 
-#define FL_BONUS 7
+#define FL_BONUS 10
 #define FOUL_PENALTY 3
 int ppcnt(int x) {
   int ret = 0;

@@ -1,237 +1,146 @@
 'use strict';
 
-var P = P || {};
+var Game = {
+  rowSizes: [3, 5, 5],
+  viewmodel: function(args) {
+    this.init = function() {
+      this.board = args.board || [[], [], []];
+      this.pull = args.pull || [];
+      this.pull.sort(p.byRank);
+      this.sortBy = 'byRank';
+      this.need = args.need || this.pull.length - (this.pull.length == 5 ? 0 : 1);
+      this.pending = args.pending || [[], [], []];
+      this.used = args.used || [];
+      this.idx = 2; this.moveIdx(0, -1);
+    }
 
-P.Board = function() {
-  this.slots = range(13).map(function() { return ''; });
-  function getPosition(rowName, rowPosition) {
-    var offsets = {'top': 10, 'mid': 5, 'bot': 0};
-    return offsets[rowName] + rowPosition;
-  }
+    this.done = function() { return this.used.length == this.need; };
+
+    this.use = function(card) {
+      this.pending[this.idx].push(card);
+      this.used.push(card);
+      this.moveIdx(0, -1);
+    };
+
+    this.unuse = function(card) {
+      this.pending.forEach(function(row) {
+        row.remove(card);
+      });
+      this.used.remove(card);
+    };
+
+    this.setIdx = function(idx) {
+      this.idx = idx;
+    };
+    this.moveIdx = function(dir1, dir2) {
+      var j = (this.idx + dir1 + 3) % 3;
+      for(var i = 0; i < 2; i += 1) {
+        if (this.pending[j].length + this.board[j].length < Game.rowSizes[j]) break;
+        j = (j + dir2 + 3) % 3;
+      }
+      this.idx = j;
+    };
+
+    this.sort = function() {
+      this.sortBy = this.sortBy == 'byRank' ? 'bySuit' : 'byRank';
+      this.pull.sort(p[this.sortBy]);
+    };
+
+    this.init();
+  },
+
+  controller: function(args) {
+    this.vm = m.prop(new Game.viewmodel(args));
+  },
+
+  view: function(ctrl, args) {
+    var vm = ctrl.vm();
+    return m('div', [
+
+      m('.board', vm.board.map(function(row, i) {
+        return m('.row', {className: vm.idx == i ? 'selected' : ''}, function() {
+          var next = vm.idx == i && !vm.done();
+          var z = 8, p = 8;
+          var children = [];
+          children = children.concat(row.map(function(card) {
+            return m('.slot',
+                {style: {'z-index': z--}}, d.draw(card));
+          }));
+          children = children.concat(vm.pending[i].map(function(card) {
+            return m('.slot.pending.clicky', {
+              style: {'z-index': (p++) + (z--)},
+              onclick: vm.unuse.bind(vm, card),
+            }, d.draw(card));
+          }));
+          children = children.concat(range((i==0 ? 3 : 5) - children.length).map(function() {
+            return m('.slot.clicky', {
+              style: {'z-index': z--}, onclick: vm.setIdx.bind(vm, i) ,
+            }, d.draw());
+          }));
+          return children;
+        }());
+      })),
+
+      m('.pull', (function(cards) {
+        var r = 1; // split lots of cards into smaller rows
+        while (cards.length / r > r * 2 + 5) r += 1; // at most 1x7, 2x9, 3x11, etc
+        var idx = 0;
+        return range(r).map(function(i) {
+          var len = Math.floor((cards.length - idx) / (r - i));
+          idx += len;
+          return cards.slice(idx - len, idx);
+        });
+      })(vm.pull).map(function(row) {
+        return m('.row', row.map(function(card, i) {
+          if (vm.used.contains(card)) {
+            return m('.slot.clicky', { onclick: vm.unuse.bind(vm, card) }, d.draw());
+          } else {
+            return m('.slot.clicky', {
+              onclick: vm.use.bind(vm, card),
+              config: function(el, init) {
+                el.addEventListener('touchstart', function() {
+                  console.log('touchstart');
+                });
+                el.addEventListener('touchmove', function(evt) {
+                  console.log('touchmove');
+                  evt.preventDefault();
+                });
+              },
+            }, d.draw(card));
+          }
+        }));
+      })),
+
+      m('.buttons', function() {
+        return [
+          m('div.btn', { onclick: vm.sort.bind(vm) }, 'SORT'),
+        ];
+      }()),
+    ])
+  },
 };
 
 var FantasyLand = {
+  controller: function(args) {
+    this.cards = m.prop(p.getDeck().slice(0, args.len || 14));
+  },
+  view: function(ctrl, args) {
+    return m('div', [
+      m.component(Game, { pull: ctrl.cards() , discard: ctrl.cards().length - 13}),
+    ]);
+  },
+};
+
+var App = {
   controller: function() {
-    },
+  },
+  view: function(ctrl) {
+    return m.component(FantasyLand, {len: 14});
+  },
+};
 
-  view: function() {
-    }
-  };
 
-
-var C;
-function consume(evt) {
-  evt.stopPropagation();
-  evt.preventDefault();
-}
-
-pineapple.controller = function() {
-  C = this;
-
-  this.setCards = function(cards) {
-    this.cards = cards;
-    this.slots = {
-      board: range(13).map(function(idx) {
-          return {
-            type: 'board',
-            idx: idx,
-            card: undefined,
-            cardIdx: undefined,
-          }
-        }),
-      hand: this.cards.map(function(card, idx) {
-          return {
-            type: 'hand',
-            idx: idx,
-            card: card,
-            used: false,
-            usedIdx: undefined,
-          }
-        }),
-      handOrder: range(14),
-      handInOrder: function() { return this.hand.take(this.handOrder); },
-      _top: function() { return this.board.slice(10, 13); },
-      mid: function() { return this.board.slice(5, 10); },
-      bot: function() { return this.board.slice(0, 5); },
-    };
-    this.sortByRank();
-  }
-
-  this.deal = function() {
-    this.setCards(p.getDeck().slice(0, 14));
-  }.bind(this);
-
-  this.sortByRank = function() {
-    var cards = this.cards;
-    function r(c) { return p.rankToNum(p.getRank(cards[c])); }
-    function s(c) { return p.getSuit(cards[c]).charCodeAt(0); }
-    this.slots.handOrder.sort(
-        function(a, b) { return r(b) == r(a) ? s(b) - s(a) : r(b) - r(a); });
-  }
-
-  this.sortBySuit = function() {
-    var cards = this.cards;
-    function r(c) { return p.rankToNum(p.getRank(cards[c])); }
-    function s(c) { return p.getSuit(cards[c]).charCodeAt(0); }
-    this.slots.handOrder.sort(
-        function(a, b) { return s(b) == s(a) ? r(b) - r(a) : s(b) - s(a); });
-  }
-
-  this.toggleSort = (function() {
-    var sortCount = 0;
-    return function() {
-      if (sortCount % 2 == 1) {
-        this.sortByRank();
-      } else {
-        this.sortBySuit();
-      }
-      sortCount += 1;
-      return false;
-    }
-  })().bind(this);
-
-  this.load = function(cardstr) {
-    this.setCards(cardstr.split(' '));
-  }
-
-  function use(from, to) {
-    to.card = from.card;
-    to.cardIdx = from.idx;
-    from.usedIdx = to.idx;
-    from.used = true;
-  }
-
-  function unuse(from, to) {
-    to.card = undefined;
-    to.cardIdx = undefined;
-    from.usedIdx = undefined
-    from.used = false;
-  }
-
-  this.reset = function() {
-    this.slots.hand.forEach(function(slot) {
-      if (slot.used) {
-        unuse(slot, this.slots.board[slot.usedIdx]);
-      }
-    }.bind(this));
-  }.bind(this);
-
-  this.showBestPlay = function() {
-    this.bestPlay = b.getBestPlay(this.cards);
-    this.reset();
-    var want = this.bestPlay.play.bot.concat(this.bestPlay.play.mid).concat(this.bestPlay.play._top);
-    want.forEach(function(card, idx) {
-      var handIdx = this.cards.indexOf(card);
-      use(this.slots.hand[handIdx], this.slots.board[idx]);
-    }.bind(this));
-  }.bind(this);
-
-  this.clickHandler = function(slot) {
-    return function(evt) {
-      evt.stopPropagation();
-      evt.preventDefault();
-      console.log('onClick', {slot});
-      if (slot.type == 'board') {
-        if (slot.card) {
-          unuse(this.slots.hand[slot.cardIdx], slot);
-        }
-      } else if (slot.type == 'hand') {
-        if (!slot.used) {
-          for (var toSlot of this.slots.board) {
-            if (!toSlot.card) {
-              use(slot, toSlot);
-              break;
-            }
-          }
-        } else {
-          this.slots.board[slot.usedIdx].card = undefined;
-          this.slots.board[slot.usedIdx].cardIdx = undefined;
-          slot.used = false;
-          slot.usedIdx = undefined;
-        }
-      }
-      return false;
-    }.bind(this);
-  }
-
-  this.deal();
-}
-
-pineapple.view = function(ctrl) {
-  window.ctrl = ctrl;
-  function makeCard(card) {
-    return d.draw(card);
-  }
-
-  function makeCardSlot(slot) {
-    var children = [];
-    if (slot.card) {
-      children.push(makeCard(slot.card));
-    }
-    if (slot.used) {
-      children.push(m('div.layer'));
-    }
-
-    return m('div.slot.poker-card-slot', {
-        onclick: ctrl.clickHandler(slot),
-        onmouseup: consume,
-        onmousedown: consume,
-        ondblclick: consume,
-        }, children);
-  }
-
-  var _top = ctrl.slots._top();
-  var mid = ctrl.slots.mid();
-  var bot = ctrl.slots.bot();
-  function ph(slots) {
-    return p.getPokerHand(slots.map(function(slot) {
-      return slot.card;
-    }));
-  }
-
-  function bonusName(bonus) {
-    if (bonus.royalty > 0) {
-      return [bonus.name + '! ', m('span.bonus', '+' + bonus.royalty)];
-    } else {
-      return [];
-      //return ['Nothing! ', m('span.bonus', '+0')];
-    }
-  }
-
-  return m('div', [
-      m('h1', 'Pineapple!'),
-      m('h2', 'The Board'),
-      m('div', [
-        m('div.row', [
-          m('div.slots', _top.map(makeCardSlot)),
-          m('div.hand_str', bonusName(p.topBonus(ph(_top)))),
-         ]),
-        m('div.row', [
-          m('div.slots', mid.map(makeCardSlot)),
-          m('div.hand_str', bonusName(p.midBonus(ph(mid)))),
-         ]),
-        m('div.row', [
-          m('div.slots', bot.map(makeCardSlot)),
-          m('div.hand_str', bonusName(p.botBonus(ph(bot)))),
-         ]),
-        ]),
-      m('h2', 'Your Hand'),
-      m('button', { onclick: ctrl.toggleSort }, 'Sort'),
-      m('button', { onclick: ctrl.reset }, 'Reset'),
-      m('div', [
-        m('div.row', ctrl.slots.handInOrder().slice(0, 7).map(makeCardSlot)),
-        m('div.row', ctrl.slots.handInOrder().slice(7, 14).map(makeCardSlot)),
-        ]),
-      m('button', { onclick: ctrl.showBestPlay }, 'Show Best Play'),
-      m('button', { onclick: ctrl.deal }, 'New'),
-      ]);
-}
-
-m.module(document.getElementById('pineapple'), {
-  controller: pineapple.controller,
-  view: pineapple.view
-});
-
+m.mount(document.getElementById('root'), App);
 
 window.setCards = function(s) {
   ctrl.setCards(s.split(' '));

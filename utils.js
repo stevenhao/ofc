@@ -30,3 +30,13 @@ Array.prototype.take = function(indices) {
     return this[idx];
   }.bind(this));
 }
+
+Array.prototype.contains = function(el) {
+  return this.indexOf(el) != -1;
+};
+
+Array.prototype.remove = function(el) {
+  if (this.indexOf(el) != -1) {
+    this.splice(this.indexOf(el), 1);
+  }
+};

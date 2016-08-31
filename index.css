@@ -1,7 +1,76 @@
-.slot {
+body {
+  background-color: #4c93c2;
+}
+.btn {
+  display: inline-block;
+  font-weight: 400;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
   cursor: pointer;
+  -webkit-user-select: none;
+  color: #fff;
+  background-color: #0C0;
+  border-color: #0C0;
+  font-size: .75rem;
+  border-radius: 25px;
+  line-height: 50px;
+  width: 50px;
+  height: 50px;
+  margin-top: 10px;
+  font-family: 'Comic Sans MS';
+}
+
+text {
+  -webkit-user-select: none;
+}
+.rank-text {
+  font-family: 'Marker Felt', 'Comic Sans MS', 'Arial';
+}
+
+.pull {
+  margin-top: 15pt;
+}
+
+.board .slot {
+  outline: 1px #00CC00 solid;
+}
+
+.pull .slot {
+  outline: 1px #EEEEEE solid;
+}
+
+.slot {
+  width: 44px;
+  height: 55px;
+  display: inline-block;
+  position: relative;
+  cursor: default;
+}
+
+.clicky {
+  cursor: pointer;
+}
+.slot.pending {
+  transform: translateX(-1px) translateY(-2px);
+  outline: none;
+  box-shadow: 1px 1px 3px #666;
+}
+
+.slot.next {
+  transform: translateX(-1px) translateY(-2px);
+  outline: none;
+  box-shadow: 1px 1px 2px #AAA;
+}
+.row {
+  display: table;
   position: relative;
 }
+
+body {
+  font-family: arial,sans-serif;
+}
+
 .card {
   -webkit-user-select: none;
   position: absolute;
@@ -9,6 +78,7 @@
   text-align: center;
   vertical-align: middle;
 }
+
 .layer {
   background-color: black;
   opacity: 0.5;
@@ -18,13 +88,11 @@
   top: 0;
   left: 0;
 }
-.row {
-  position: relative;
-}
 
 .slots {
   display: inline-block;
 }
+
 .hand_str {
   position: absolute;
   display: inline-block;
@@ -35,6 +103,7 @@
   font-family: 'Marker Felt';
   font-size: 15pt
 }
+
 span.bonus {
   font-weight: bold;
   font-size: 18pt

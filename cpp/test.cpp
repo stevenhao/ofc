@@ -134,6 +134,7 @@ void testBrain2() {
     return;
   }
   int mult = 5;
+  GLOBAL_SEED *= mult;
 
   //cout << "used: "; disp(used, "\n");
   int k = 3, j = 15, time = 500;
@@ -144,7 +145,7 @@ void testBrain2() {
     time = 20;
   }
   if (sz(B) == 0) {
-    j = 35;
+    j = 50;
     time = 6;
   }
   time *= mult;
@@ -162,12 +163,12 @@ void testBrain2() {
 
 
 int main() {
-  GLOBAL_SEED = 8;
+  GLOBAL_SEED = 10;
   generateFive();
   generateThree();
-  for(int i = 1; i <= 100; ++i) {
+  /*for(int i = 1; i <= 100; ++i) {
     cout << "Simulation " << i << ":\n";
     simulateGame(true, i);
-  }
-  //testBrain2();
+  }*/
+  testBrain2();
 }
