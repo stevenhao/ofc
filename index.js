@@ -10,6 +10,7 @@ var Game = {
       this.pull.sort(p.byRank);
       this.sortBy = 'byRank';
       this.need = args.need || this.pull.length - (this.pull.length == 5 ? 0 : 1);
+      if (this.need > 13) this.need = 13; // special case for weird fantasy land??
       this.pending = args.pending || [[], [], []];
       this.used = args.used || [];
       this.idx = 2; this.moveIdx(0, -1);
@@ -241,7 +242,6 @@ var App = {
           }
         }
       }),
-      m('button.edit', { onclick: ctrl.refresh.bind(ctrl) }),
     ]);
   },
 };
