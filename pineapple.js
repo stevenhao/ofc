@@ -13,7 +13,7 @@
       [p.tiers.RoyalFlush, 25],
     ])
 
-  function topBonus(hand) {
+  function topBonus(hand, wasFL) {
     var ret = 0;
     var value = Math.floor(hand.kickerValue); // this gives the main part of the hand (0-th kicker)
     var rankName = p.getPluralStr(p.numToRank(value));
@@ -21,38 +21,43 @@
       return {
         name: 'Three of a Kind ' + rankName,
         royalty: value + 8,
+        fl: true,
       }
     } else if (hand.tier == p.tiers.Pair && value >= 6) {
       return {
         name: rankName,
         royalty: Math.max(0, value - 5),
+        fl: value >= 12 && !wasFL,
       }
     } else {
       return {
         name: hand.name,
         royalty: 0,
+        fl: false,
       };
     }
   }
 
-  function midBonus(hand) {
+  function midBonus(hand, wasFL) {
     var royalty = 0;
+    var fl = wasFL && (hand.tier >= p.tiers.FourOfAKind);
     if (bonuses.has(hand.tier)) {
       royalty = bonuses.get(hand.tier) * 2;
     } else if (hand.tier == p.tiers.ThreeOfAKind) {
       royalty = 2;
     }
 
-    return { name: hand.name, royalty: royalty, }
+    return { name: hand.name, royalty: royalty, fl: fl, }
   }
 
-  function botBonus(hand) {
+  function botBonus(hand, wasFL) {
     var royalty = 0;
+    var fl = wasFL && (hand.tier >= p.tiers.FourOfAKind);
     if (bonuses.has(hand.tier)) {
       royalty = bonuses.get(hand.tier);
     }
 
-    return { name: hand.name, royalty: royalty, }
+    return { name: hand.name, royalty: royalty, fl: fl, }
   }
 
   function legal(top_, mid, bot) {
@@ -73,6 +78,9 @@
   p.midBonus = midBonus;
   p.botBonus = botBonus;
 
+  p.getBonus = function(hand, idx, wasFL) {
+    return [topBonus, midBonus, botBonus][idx](hand, wasFL);
+  }
 
   function fillSuit(s) {
     if (s.length == 1) {

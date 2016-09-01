@@ -62,12 +62,16 @@
     return ret;
   }
 
-  function drawBack(w, h, fill) {
+  function drawBack(w, h, fill, stroke) {
     fill = fill || '#FFF';
+    stroke = stroke || '#CCC';
     return m('rect', {
       width: w,
       height: h,
       fill: fill,
+      stroke: stroke,
+      'stroke-width': '5',
+      rx: 25,
     });
   }
 
@@ -91,24 +95,52 @@
     );
   }
 
+  function drawBlank(selected) {
+    return m('svg.card.blank', {viewBox:'0 0 200 250', className: selected ? 'selected': ''}, m('g', drawBack(200, 250, '#4daf9c', '#00cc00')));
+  }
+
   function draw(card, showGrid) {
-    return m('svg', {viewBox:'0 0 200 250'}, function() {
+    return m('svg.card', {viewBox:'0 0 200 250'}, function() {
       var els = [];
-      if (card) {
-        els = els.concat([ m('g', drawBack(200, 250)) ]);
-        var rank = p.getRank(card), suit = p.getSuit(card);
-        var color = d.colors[suit];
-        els = els.concat([
-          m('g', showGrid ? drawGrid(200, 250) : []),
-          m('g', {fill: color}, drawRank(rank)),
-          m('g', {fill: color}, drawSuit(suit)),
-        ]);
-      } else {
-        console.log('draw blank');
-        els = els.concat([ m('g', drawBack(200, 250, '#4daf9c')) ]);
-      }
+      els = els.concat([ m('g', drawBack(200, 250)) ]);
+      var rank = p.getRank(card), suit = p.getSuit(card);
+      var color = d.colors[suit];
+      els = els.concat([
+        m('g', showGrid ? drawGrid(200, 250) : []),
+        m('g', {fill: color}, drawRank(rank)),
+        m('g', {fill: color}, drawSuit(suit)),
+      ]);
       return els;
     }());
   }
+
+  function drawFoul(card, showGrid) {
+    if (card) {
+      return m('svg.card', {
+        viewBox:'0 0 200 250',
+        style: {
+          transform: 'rotate(' + (Math.random() - 0.5) * 60+ 'deg)',
+        }
+      }, function() {
+        var els = [];
+        if (card) {
+          els = els.concat([ m('g', drawBack(200, 250, '#CCC', '#CCC')) ]);
+          var rank = p.getRank(card), suit = p.getSuit(card);
+          var color = d.colors[suit];
+          els = els.concat([
+            m('g', showGrid ? drawGrid(200, 250) : []),
+            m('g', {fill: color}, drawRank(rank)),
+            m('g', {fill: color}, drawSuit(suit)),
+          ]);
+        }
+        return els;
+      }());
+    } else {
+      return m('svg.card.blank', {viewBox:'0 0 200 250'}, m('g', drawBack(200, 250, '#5daf9c', '#00cc00')));
+    }
+  }
+
   d.draw = draw;
+  d.drawBlank = drawBlank;
+  d.drawFoul = drawFoul;
 })();

@@ -1,6 +1,23 @@
 body {
   background-color: #4c93c2;
 }
+textarea.edit {
+  word-wrap: break-word;
+  word-break: break-all;
+  width: 300px;
+  height: 60px;
+  font-size: 15pt;
+}
+.game {
+  /*display: table-cell;*/
+  width: 300px;
+  border-spacing: 0px;
+}
+
+.selected rect {
+  fill: #3cbe8c;
+}
+
 .btn {
   display: inline-block;
   font-weight: 400;
@@ -10,15 +27,29 @@ body {
   cursor: pointer;
   -webkit-user-select: none;
   color: #fff;
-  background-color: #0C0;
-  border-color: #0C0;
   font-size: .75rem;
-  border-radius: 25px;
   line-height: 50px;
-  width: 50px;
-  height: 50px;
   margin-top: 10px;
   font-family: 'Comic Sans MS';
+}
+.btn.wide {
+  width: 100%;
+  font-size: 20pt;
+}
+
+.btn.round {
+  border-radius: 25px;
+  width: 50px;
+  height: 50px;
+}
+.btn.sort {
+  background-color: #0C0;
+  border-color: #0C0;
+}
+.btn.commit {
+  background-color: red;
+  border-color: red;
+  float: right;
 }
 
 text {
@@ -32,20 +63,24 @@ text {
   margin-top: 15pt;
 }
 
-.board .slot {
-  outline: 1px #00CC00 solid;
-}
-
 .pull .slot {
-  outline: 1px #EEEEEE solid;
+  outline: none;
 }
 
 .slot {
-  width: 44px;
-  height: 55px;
   display: inline-block;
   position: relative;
   cursor: default;
+}
+
+.board .slot {
+  width: 44px;
+  height: 55px;
+}
+
+.pull .slot {
+  width: 40px;
+  height: 55px;
 }
 
 .clicky {
@@ -63,7 +98,7 @@ text {
   box-shadow: 1px 1px 2px #AAA;
 }
 .row {
-  display: table;
+  display: table-row;
   position: relative;
 }
 
@@ -71,40 +106,38 @@ body {
   font-family: arial,sans-serif;
 }
 
-.card {
+.board .card {
+  width: 44px;
+}
+
+.pull .card {
   -webkit-user-select: none;
-  position: absolute;
-  width: 100%;
-  text-align: center;
-  vertical-align: middle;
+  width: 44px;
 }
 
-.layer {
-  background-color: black;
-  opacity: 0.5;
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
+.card.blank {
+  border: 1px transparent;
+  border-radius: 0;
 }
 
-.slots {
-  display: inline-block;
+.cards {
+  display: table-cell;
 }
 
-.hand_str {
+.bonus {
   position: absolute;
-  display: inline-block;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-left: 5px;
-  color: green;
+  margin-left: 10px;
+  transform: translateY(16px);
   font-family: 'Marker Felt';
-  font-size: 15pt
+  font-weight: bold;
+  font-size: 15pt;
+  line-height: 15pt;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  background-image: linear-gradient(180deg, white, #a6a693);
 }
 
-span.bonus {
-  font-weight: bold;
-  font-size: 18pt
+.bonus.fl {
+  background-image: linear-gradient(180deg, orange, yellow, white);
 }

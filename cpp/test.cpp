@@ -133,6 +133,11 @@ void testBrain2() {
     cout << sum / T << "\n";
     return;
   }
+  if (pull.size() >= 13) {
+    FL_BONUS = 0;
+    cout << "TEST RESULT: " << scoreOptimistic(row(), row(), row(), pull) << "\n";
+    return;
+  }
   int mult = 5;
   GLOBAL_SEED *= mult;
 

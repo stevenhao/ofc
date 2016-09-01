@@ -162,6 +162,16 @@
     }
   }
 
+  function parseHandstr(handstr) {
+    return handstr.split(/\s+/);
+  }
+
+  function toHandstr(hand) {
+    return hand.join(' ');
+  }
+
+  p.parseHandstr = parseHandstr;
+  p.toHandstr = toHandstr;
   p.getPokerHand = getPokerHand;
   p.betterPokerHand = betterPokerHand;
   p.getDeck = getDeck;

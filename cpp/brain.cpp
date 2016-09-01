@@ -1,7 +1,7 @@
 #include "pineapple.cpp"
 
-#define FL_BONUS 10
-#define FOUL_PENALTY 3
+double FL_BONUS = 10;
+double FOUL_PENALTY = 3;
 int ppcnt(int x) {
   int ret = 0;
   while (x) {
