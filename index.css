@@ -5,19 +5,20 @@ textarea.edit {
   word-wrap: break-word;
   word-break: break-all;
   height: 60px;
-  font-size: 15pt;
-  width: 300px;
+  font-size: 13pt;
+  width: 290px;
+  background-color: #4c93c2;
+  border: #4c93c2;
+  color: white;
+  outline: #4c93c2;
 }
 .game {
   /*display: table-cell;*/
   border-spacing: 0px;
-  width: 300px;
+  width: 240px;
   max-width: 400px;
 }
 
-.selected rect {
-  fill: #3cbe8c;
-}
 
 .btn {
   display: inline-block;
@@ -34,7 +35,7 @@ textarea.edit {
   font-family: 'Comic Sans MS';
 }
 .btn.wide {
-  width: 300px;
+  width: 100%;
   font-size: 20pt;
 }
 .edit {
@@ -77,16 +78,28 @@ text {
   cursor: default;
 }
 
+.board {
+  margin-top: 30px;
+}
+
 .board .slot {
   width: 44px;
   height: 55px;
 }
 
+.inactive .buttons {
+  display: none;
+}
+.inactive .pull {
+  display: none;
+}
 .pull .slot {
   width: 40px;
   height: 55px;
 }
-
+.discarded {
+  margin-top: 10px;
+}
 .clicky {
   cursor: pointer;
 }
@@ -101,13 +114,19 @@ text {
   outline: none;
   box-shadow: 1px 1px 2px #AAA;
 }
-.row {
+.board .row {
   display: table-row;
+}
+.row {
   position: relative;
 }
 
 body {
   font-family: arial,sans-serif;
+}
+
+.discarded .card {
+  width: 24px;
 }
 
 .board .card {
@@ -124,6 +143,23 @@ body {
   border-radius: 0;
 }
 
+.card rect {
+  fill: #FFF;
+  stroke: #CCC;
+  stroke-width: 3;
+  rx: 25;
+}
+.active .card.blank rect {
+  fill: #4daf9c;
+  stroke: #00cc00;
+}
+.inactive .card.blank rect {
+  fill: #4c93c2;
+  stroke: #CCC;
+}
+.selected .card.blank rect {
+  fill: #3cbe8c;
+}
 .cards {
   display: table-cell;
 }

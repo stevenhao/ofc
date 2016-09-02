@@ -1,4 +1,7 @@
 function nop() {}
+function cp(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
 function range(x, y) {
   if (y == undefined) {
     y = x;

@@ -62,16 +62,10 @@
     return ret;
   }
 
-  function drawBack(w, h, fill, stroke) {
-    fill = fill || '#FFF';
-    stroke = stroke || '#CCC';
+  function drawBack(w, h) {
     return m('rect', {
       width: w,
       height: h,
-      fill: fill,
-      stroke: stroke,
-      'stroke-width': '5',
-      rx: 25,
     });
   }
 
@@ -95,8 +89,10 @@
     );
   }
 
-  function drawBlank(selected) {
-    return m('svg.card.blank', {viewBox:'0 0 200 250', className: selected ? 'selected': ''}, m('g', drawBack(200, 250, '#4daf9c', '#00cc00')));
+  function drawBlank() {
+    return m('svg.card.blank', {
+      viewBox:'0 0 200 250',
+    }, m('g', drawBack(200, 250, '#4daf9c', '#00cc00')));
   }
 
   function draw(card, showGrid) {
