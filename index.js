@@ -263,13 +263,7 @@ var FLCalc = {
         brain: function(board, pull) {
           // we know this is a fantasy land hand
           var trace = b.getBestPlay(pull).play;
-          var moves = [];
-          [trace._top, trace.mid, trace.bot].forEach(function(row, i) {
-            row.forEach(function(card) {
-              moves.push({card: card, idx: i});
-            });
-          });
-          return moves;
+          return [trace._top, trace.mid, trace.bot];
         },
         cards: ctrl.cards(),
       }),
