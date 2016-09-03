@@ -1,7 +1,7 @@
 (function() {
   window.b = window.b || {};
 
-  function getBestPlay(cards) {
+  function playFL(cards) {
     var memo = range(1<<14).map(function() { return 0; } );
     // try everything?
     var mx = 0;
@@ -74,28 +74,5 @@
 
     return {royalty: mx, play: trace}
   }
-
-
-  b.runTrial = function() {
-    var cards = p.getDeck().slice(0, 14);
-    var bestPlay = b.getBestPlay(cards);
-    return bestPlay.royalty;
-  }
-  b.runTrials = function(n) {
-    n = n || 100;
-    var sum = 0;
-    var cnt = 0;
-    range(n).forEach(function(i) {
-      console.log('running trial ', i);
-      var stime = Date.now();
-      var outcm = b.runTrial();
-      var etime = Date.now();
-      sum += outcm;
-      cnt += 1;
-      console.log('took', etime-stime, 'millis');
-      console.log('current average: ', sum / cnt);
-    });
-  }
-
-  b.getBestPlay = getBestPlay;
+  b.playFL = playFL;
 })();

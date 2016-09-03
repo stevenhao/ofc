@@ -61,7 +61,7 @@
   }
 
   function legal(top_, mid, bot) {
-    return p.betterPokerHand(bot, mid) && p.betterPokerHand(mid, top_);
+    return !p.betterPokerHand(mid, bot) && !p.betterPokerHand(top_, mid);
   }
 
   function scorePineapple(top_, mid, bot) {

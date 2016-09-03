@@ -1,7 +1,7 @@
 #include "pineapple.cpp"
 
 double FL_BONUS = 10;
-double FOUL_PENALTY = 3;
+double FOUL_PENALTY = 5;
 int ppcnt(int x) {
   int ret = 0;
   while (x) {
@@ -288,8 +288,9 @@ double evaluate2(board &B, vector<card> &used, int seed, bool verbose=false) {
       pair<double, play> pp = bestMoveFast(curB, curUsed, pull);
       apply(curB, pp.second, pull);
       int otherSize = curUsed.size() == 5 ? 5 : 2;
-      curUsed.insert(curUsed.end(), r.begin(), r.begin() + otherSize);
-      r.erase(r.begin(), r.begin() + otherSize);
+      //otherSize *= 2;
+      curUsed.insert(curUsed.end(), r.end() - otherSize, r.end());
+      r.erase(r.end() - otherSize, r.end());
       score = pp.first;
     }
     if (verbose) {

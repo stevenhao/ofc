@@ -239,30 +239,32 @@ var FantasyLand = {
 };
 
 var FLCalc = {
-  controller: function() {
+  controller: function(args) {
     this.cards = m.prop(p.getDeck().slice(0, 14).sort(p.byRank));
+    if (m.route.param("cardstr")) {
+      var cardstr = m.route.param("cardstr");
+      cardstr = range(cardstr.length/2).map(function(i) {
+        return cardstr.substr(i*2, 2);
+      }).join(' ');
+      this.cards(p.parseHandstr(cardstr));
+    }
     this.inp = m.prop(p.toHandstr(this.cards()));
     this.a = 1;
     this.b = 0;
     this.refresh = function() {
       console.log('refreshing.\n');
-      this.cards(p.parseHandstr(this.inp()));
-      console.log(this.cards());
-      this.kill = true;
-      m.redraw(true);
+      var cardstr = this.inp();
+      cardstr = this.inp().split(/\s+/).join('');
+      m.route("/flcalculator/" + cardstr);
     };
   },
-  view: function(ctrl) {
-    if (ctrl.kill) {
-      ctrl.kill = false;
-      return m('div', 'empty'); // next cycle will recreate components
-    }
+  view: function(ctrl, args) {
     return m('div', [
       m.component(FantasyLand, {
         len: 14,
         brain: function(board, pull) {
           // we know this is a fantasy land hand
-          var trace = b.getBestPlay(pull).play;
+          var trace = b.playFL(pull).play;
           return [trace._top, trace.mid, trace.bot];
         },
         cards: ctrl.cards(),
@@ -417,6 +419,7 @@ var App = {
 
 
 m.route(document.body, "/", {
+    "/flcalculator/:cardstr": FLCalc,
     "/flcalculator": FLCalc,
     "/": App,
 });
