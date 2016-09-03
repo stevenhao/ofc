@@ -34,6 +34,10 @@ textarea.edit {
   margin-top: 10px;
   font-family: 'Comic Sans MS';
 }
+.btn.hide {
+  cursor: default;
+  opacity: 0;
+}
 .btn.wide {
   width: 100%;
   font-size: 20pt;
@@ -88,10 +92,11 @@ text {
 }
 
 .inactive .buttons {
-  display: none;
+  opacity: 0;
 }
-.inactive .pull {
-  display: none;
+.inactive .pull .slot{
+  opacity: 0;
+  cursor: default;
 }
 .pull .slot {
   width: 40px;

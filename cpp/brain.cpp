@@ -1,7 +1,7 @@
 #include "pineapple.cpp"
 
 double FL_BONUS = 10;
-double FOUL_PENALTY = 5;
+double FOUL_PENALTY = 3;
 int ppcnt(int x) {
   int ret = 0;
   while (x) {

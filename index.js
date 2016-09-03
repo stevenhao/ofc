@@ -88,95 +88,105 @@ var Game = {
   view: function(ctrl, args) {
     var vm = ctrl.vm();
     return m('.game', [
-      m('.there',
-        {className: !vm.active ? 'active' : 'inactive'},
+      m('.there', {className: [
+          !vm.active ? 'active' : 'inactive',
+        ].join(' ') },
         vm.opp.map(function(board, idx) {
           return m('.board', board.map(function(row, i) {
             return m('.row', function() {
-              var next = vm.idx == i && !vm.done();
               var z = 8, p = 8;
-              var children = [];
-              children = children.concat(row.map(function(card) {
+              return row.map(function(card) {
                 return m('.slot', {style: {'z-index': z--}}, d.draw(card));
-              }));
-              children = children.concat(
-                  range(Game.rowSizes[i] - children.length).map(function() {
-                    return m('.slot', {
-                      style: {'z-index': z--},
-                    }, d.drawBlank(false, !vm.active));
-                  }));
-              return children;
+              }).concat(
+                range(Game.rowSizes[i] - row.length).map(function() {
+                  return m('.slot', {
+                    style: {'z-index': z--},
+                  }, d.drawBlank(false, !vm.active));
+                }));
             }());
           }));
       })),
+     m('.here', {className: [
+          vm.active ? 'active' : 'inactive',
+        ].join(' ') }, [
+          m('.board', vm.board.map(function(row, i) {
+            return m('.row', [
+              m('.cards', {className: vm.active && (vm.idx == i) ? 'selected' : ''}, function() {
+                var z = 8, p = 8;
+                return row.map(function(card) {
+                  return m('.slot',
+                      {style: {'z-index': z--}}, vm.foul ? d.drawFoul(card) : d.draw(card));
+                }).concat(vm.pending[i].map(function(card) {
+                  return m('.slot.pending.clicky', {
+                    style: {'z-index': (p++) + (z--)},
+                    onclick: vm.unuse.bind(vm, card),
+                  }, d.draw(card));
+                })).concat(range(Game.rowSizes[i] - row.length - vm.pending[i].length).map(function() {
+                  return m('.slot.clicky', {
+                    style: {'z-index': z--}, onclick: vm.setIdx.bind(vm, i) ,
+                  }, d.drawBlank(vm.active && (i == vm.idx), vm.active));
+                }));
+              }()),
+              function() {
+                if (!vm.ended) return null;
+                var bonus = vm.bonuses[i];
+                var bstr = bonus.name + '!&nbsp;&nbsp;+' + bonus.royalty;
+                return m('.bonus', {className: bonus.fl ? 'fl' : ''}, m.trust(bstr));
+              }(),
+            ]);
+          })),
 
-      m('.here', {className: vm.active ? 'active' : 'inactive'}, [
-        m('.board', vm.board.map(function(row, i) {
-          return m('.row', {className: vm.active && (vm.idx == i) ? 'selected' : ''}, function() {
-            var z = 8, p = 8;
-            var children = [];
-            children = children.concat(row.map(function(card) {
-              return m('.slot',
-                  {style: {'z-index': z--}}, d.draw(card));
-            }));
-            children = children.concat(vm.pending[i].map(function(card) {
-              return m('.slot.pending.clicky', {
-                style: {'z-index': (p++) + (z--)},
-                onclick: vm.unuse.bind(vm, card),
-              }, d.draw(card));
-            }));
-            children = children.concat(range(Game.rowSizes[i] - children.length).map(function() {
-              return m('.slot.clicky', {
-                style: {'z-index': z--}, onclick: vm.setIdx.bind(vm, i) ,
-              }, d.drawBlank(vm.active && (i == vm.idx), vm.active));
-            }));
-            return children;
-          }());
-        })),
+          m('.pull', (function(cards) {
+            var r = 1; while (cards.length / r > r * 2 + 5) r += 1; // split, at most 1x7, 2x9, 3x11, etc
+            var pos = 0;
+            return range(r).map(function(i) {
+              var len = Math.floor((cards.length - pos) / (r - i));
+              pos += len;
+              return cards.slice(pos - len, pos);
+            }).map(function(row) {
+              return m('.row', {style: {'min-width': row.length*40+4 }}, row.map(function(card, i) {
+                if (vm.used.contains(card)) {
+                  return m('.slot', {
+                    //onclick: vm.unuse.bind(vm, card),
+                  });
+                } else {
+                  return m('.slot.clicky', {
+                    onclick: vm.use.bind(vm, card),
+                    config: function(el, init) {
+                      el.addEventListener('touchstart', function() {
+                        console.log('touchstart');
+                      });
+                      el.addEventListener('touchmove', function(evt) {
+                        console.log('touchmove');
+                        evt.preventDefault();
+                      });
+                    },
+                  }, d.draw(card));
+                }
+              }));
+            });
+          })(vm.pull)),
 
-        m('.pull', (function(cards) {
-          var r = 1; // split lots of cards into smaller rows
-          while (cards.length / r > r * 2 + 5) r += 1; // at most 1x7, 2x9, 3x11, etc
-          var idx = 0;
-          return range(r).map(function(i) {
-            var len = Math.floor((cards.length - idx) / (r - i));
-            idx += len;
-            return cards.slice(idx - len, idx);
-          }).map(function(row) {
-            return m('.row', {style: {'min-width': row.length * 40 + 4 }}, row.map(function(card, i) {
-              if (vm.used.contains(card)) {
-                return m('.slot', {
-                  //onclick: vm.unuse.bind(vm, card),
-                });
-              } else {
-                return m('.slot.clicky', {
-                  onclick: vm.use.bind(vm, card),
-                  config: function(el, init) {
-                    el.addEventListener('touchstart', function() {
-                      console.log('touchstart');
-                    });
-                    el.addEventListener('touchmove', function(evt) {
-                      console.log('touchmove');
-                      evt.preventDefault();
-                    });
-                  },
-                }, d.draw(card));
-              }
-            }));
-          });
-        })(vm.pull)),
+         m('.buttons', function() {
+           var showCommit = vm.active && vm.done();
+           var showBrain = vm.active && vm.brain;
+           var showSort = vm.active;
+            return [
+              m('.btn.round.sort', showSort ?
+                  { onclick: vm.sort.bind(vm) } :
+                  { className: 'hide' }, 'SORT'),
+              m('.btn.round.commit', showCommit ?
+                  { onclick: vm.commit.bind(vm) } :
+                  { className: 'hide' } , 'SET'),
+              m('.btn.wide.help', showBrain ?
+                  { onclick: vm.help.bind(vm) } :
+                  { className: 'hide' } , 'Ask God'),
+            ];
+          }()),
 
-       m('.buttons', function() {
-          return [
-            m('.btn.round.sort', { onclick: vm.sort.bind(vm) }, 'SORT'),
-            vm.done() ? m('.btn.round.commit', { onclick: vm.commit.bind(vm) }, 'SET') : null,
-            vm.brain ? m('.btn.wide.help', { onclick: vm.help.bind(vm) }, 'Ask God') : null,
-          ];
-        }()),
-
-        m('.discarded', vm.discarded.map(function(card) {
-          return d.draw(card);
-        })),
+          m('.discarded', vm.discarded.map(function(card) {
+            return d.draw(card);
+          })),
       ]),
     ])
   },
@@ -255,7 +265,7 @@ var FLCalc = {
       console.log('refreshing.\n');
       var cardstr = this.inp();
       cardstr = this.inp().split(/\s+/).join('');
-      m.route("/flcalculator/" + cardstr);
+      m.route("/fl/" + cardstr);
     };
   },
   view: function(ctrl, args) {
@@ -418,10 +428,12 @@ var App = {
 };
 
 
+m.route.mode = "hash";
 m.route(document.body, "/", {
-    "/flcalculator/:cardstr": FLCalc,
-    "/flcalculator": FLCalc,
-    "/": App,
+    "/fl/:cardstr": FLCalc,
+    "/fl": FLCalc,
+    "/play": App,
+    "/": FLCalc,
 });
 window.setCards = function(s) {
   ctrl.setCards(s.split(' '));
