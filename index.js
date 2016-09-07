@@ -136,7 +136,7 @@ var Game = {
             ]);
           })),
 
-          m('.pull', (function(cards) {
+          m('.pull', { className: vm.endgame ? 'hide' : '' }, (function(cards) {
             var r = 1; while (cards.length / r > r * 2 + 5) r += 1; // split, at most 1x7, 2x9, 3x11, etc
             var pos = 0;
             return range(r).map(function(i) {
@@ -218,31 +218,35 @@ var EndGame = {
 var FantasyLand = {
   controller: function(args) {
     this.cards = m.prop(args.cards || p.getDeck().slice(0, args.len || 14));
-    this.endgame = m.prop(null);
-    //this.endgame({ board: [ ['As', 'Ah', 'Qs'], ['Jh', 'Js', 'Jd', 'Jc', 'Tc'], ['3d', '4d', '5d', '6d', '7h'], ], });
+    this.active = m.prop(true);
+    this.board = m.prop([[], [], []]);
+    this.oncommit = function(pending) {
+      this.board(pending);
+      this.active(false);
+      this.kill = true;
+      m.redraw(true);
+    };
+    this.kill = false;
   },
   view: function(ctrl, args) {
+    if (ctrl.kill) {
+      ctrl.kill = false;
+      return m('div', 'redrawing'); // next cycle will recreate components
+    }
     return m('div', [
       (function() {
-        if (ctrl.endgame()) {
-          return m.component(EndGame, {
-            board: ctrl.endgame().board,
-            wasFL: true,
-          });
-        } else {
-          return m('div', [
-            m.component(Game, {
-              pull: ctrl.cards(),
-              toDiscard: ctrl.cards().length - 13,
-              oncommit: function(pending) {
-                var board = pending;
-                ctrl.endgame({ board: board, });
-              },
-              brain: args.brain,
-              active: true,
-            }),
-          ]);
-        }
+        return m('div', [
+          m.component(Game, {
+            active: ctrl.active(),
+            endgame: !ctrl.active(),
+            board: ctrl.board(),
+            isFL: true,
+            pull: ctrl.cards(),
+            toDiscard: ctrl.cards().length - 13,
+            oncommit: ctrl.oncommit.bind(ctrl),
+            brain: args.brain,
+          }),
+        ]);
       })(),
     ]);
   },
@@ -262,7 +266,6 @@ var FLCalc = {
     this.a = 1;
     this.b = 0;
     this.refresh = function() {
-      console.log('refreshing.\n');
       var cardstr = this.inp();
       cardstr = this.inp().split(/\s+/).join('');
       m.route("/fl/" + cardstr);
@@ -426,7 +429,6 @@ var App = {
     })());
   },
 };
-
 
 m.route.mode = "hash";
 m.route(document.body, "/", {

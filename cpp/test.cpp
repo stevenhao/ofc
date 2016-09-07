@@ -138,7 +138,7 @@ void testBrain2() {
     cout << "TEST RESULT: " << scoreOptimistic(row(), row(), row(), pull) << "\n";
     return;
   }
-  int mult = 10;
+  int mult = 15;
   GLOBAL_SEED *= mult;
 
   //cout << "used: "; disp(used, "\n");
