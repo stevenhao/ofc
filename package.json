@@ -13,6 +13,8 @@
     "node-json-rpc": "0.0.1"
   },
   "devDependencies": {
-    "gulp": "^3.9.1"
+    "gulp": "^3.9.1",
+    "gulp-concat-js": "^0.1.0",
+    "gulp-sourcemaps": "^1.6.0"
   }
 }
