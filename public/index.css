@@ -12,8 +12,13 @@ textarea.edit {
   color: white;
   outline: #4c93c2;
 }
+
+
 .game {
-  /*display: table-cell;*/
+  position: absolute;
+  left: 50px;
+  top: 50px;
+  display: table-cell;
   border-spacing: 0px;
   width: 240px;
   max-width: 400px;
@@ -143,6 +148,10 @@ body {
   width: 44px;
 }
 
+.pull {
+  height: 55px;
+}
+
 .card.blank {
   border: 1px transparent;
   border-radius: 0;
@@ -155,15 +164,18 @@ body {
   rx: 25;
 }
 .active .card.blank rect {
-  fill: #4daf9c;
-  stroke: #00cc00;
+  fill: #2db6c6;
+  stroke: #73fe73;
 }
 .inactive .card.blank rect {
   fill: #4c93c2;
   stroke: #CCC;
 }
 .selected .card.blank rect {
-  fill: #3cbe8c;
+  fill: #41d8a2;
+}
+.card.foul rect {
+  fill: #cccccc;
 }
 .cards {
   display: table-cell;

@@ -1,5 +1,5 @@
-(function() {
-  window.b = window.b || {};
+module.exports = (function() {
+  var b = {};
 
   function playFL(cards) {
     var memo = range(1<<14).map(function() { return 0; } );
