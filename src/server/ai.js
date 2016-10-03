@@ -1,19 +1,46 @@
 var rpc = require('node-json-rpc');
 var serv = new rpc.Server({ port: 7000, strict: false });
 
-const spawn = require('child_process').spawn;
-const cpp = spawn('cpp/endpoint');
+var cpp = (function() {
+  var cpp = {};
+  const spawn = require('child_process').spawn;
+  const subp = spawn('cpp/endpoint');
 
-cpp.stdout.on('data', (data) => {
-  console.log(`cpp stdout: ${data}`);
+  var cbks = {};
+  var qid = 0;
+  subp.stdout.on('data', (data) => {
+    console.log('cpp: on data', data);
+    data = data + '';
+    data.split('\n').forEach(function(line) {
+      if (line.length == 0) return;
+      var response;
+      try {
+        response = JSON.parse(line);
+      } catch (e) {}
+      console.log('response', response);
+      cbks[line.id](response.result);
+    });
+  });
+
+  cpp.call = function(name, params, cbk) {
+    console.log('cpp: calling', name, params);
+    ++qid;
+    var query = {id: qid, name: name, params: params};
+    console.log('cpp: writing', JSON.stringify(query));
+    subp.stdin.cork();
+    subp.stdin.write(JSON.stringify(query));
+    subp.stdin.uncork();
+    console.log('cpp: saving callback');
+    cbks[qid] = cbk;
+  };
+
+  return cpp;
+})();
+
+cpp.call('evaluate', [1, 2, 3], function(result) {
+  console.log('main: final answer', result);
 });
 
-cpp.stdin.cork();
-cpp.stdin.write('hello\n');
-cpp.stdin.uncork();
-cpp.stdin.cork();
-cpp.stdin.write('world\n');
-cpp.stdin.uncork();
 
 var ai = {};
 ai.validate = function(query) {

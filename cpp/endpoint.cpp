@@ -1,6 +1,8 @@
 #include "brain2.cpp"
+#include "json/src/json.hpp"
 #include <iostream>
 
+using namespace nlohmann;
 using namespace std;
 
 row readRow() {
@@ -19,17 +21,23 @@ vector<row> readRows(int num) {
   return rows;
 }
 
-void doQuery() {
+bool doQuery() {
+  json query, response;
+  string line;
+  getline(cin, line);
+  cout << "parsing " << line << "\n";
+  query = json::parse(line);
+  response["id"] = query["id"];
+  response["result"] = 10;
+  cout << response << "\n";
+  cout.flush();
+  return true;
 }
-
 
 
 int main() {
   generateFive();
   generateThree();
-  string x;
-  while (cin >> x) {
-    cout << "You said, " << x << "\n";
-    cout.flush();
+  while (doQuery()) {
   }
 }
