@@ -1,0 +1,94 @@
+body {
+  background-image: linear-gradient(to bottom,#d7d7d7 0%,#eeeeee 116px);
+  background-color: #d7d7d7;
+  width: 100%;
+  height: 100%;
+}
+
+.board {
+  margin-top: 0%;
+}
+
+.anal .upper .board {
+  width: 220px;
+  height: 165px;
+}
+
+.anal .lower .board {
+  width: 44px;
+  height: 33px;
+}
+
+.anal .lower tbody tr:hover .board {
+  width: 88px;
+  height: 66px;
+}
+
+.anal .board .slot {
+  width: 20%;
+  height: 100%;
+}
+
+.anal .slot.pending {
+  transform: none;
+  background-color: yellow;
+}
+
+.anal .board .card {
+  width: 100%;
+}
+
+.anal .card.blank rect {
+  fill: #f4f4f4;
+  stroke: #222b22;
+}
+.anal .pane {
+  width: 49%;
+  height: 100%;
+  border: 1px dashed black;
+}
+.anal .left {
+  float: left;
+}
+.anal .right {
+  float: right;
+}
+.anal .vpane {
+  padding-left: 4%;
+  padding-top: 4%;
+  padding-bottom: 4%;
+  padding-right: 4%;
+}
+.anal table {
+  margin-top: 10px;
+  border-color: rgb(128, 128, 128) ;
+  border-collapse: collapse ;
+  color: rgb(112, 112, 112) ;
+  font-size: 12px ;
+  text-shadow: rgb(255, 255, 255) 0px 1px 0px ;
+  width: 90% ;
+}
+
+.anal tr {
+}
+
+.anal table thead tr {
+  background-color: rgba(255,255,255,0.1);
+  height: 20px;
+}
+.anal table thead td {
+  text-shadow: 0 1px 0 #FFF;
+  font-weight: 100;
+  font-family: 'Roboto';
+}
+
+.anal table tr {
+  border: 1px solid grey;
+  background-color: rgba(255,255,255,0.6);
+  width: 60%;
+  height: 40px;
+}
+
+.anal table tbody tr:hover {
+  height: 100px;
+}
