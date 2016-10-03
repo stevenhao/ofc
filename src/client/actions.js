@@ -22,6 +22,9 @@ module.exports = function(args) {
       }));
   }));
 
+  var pullBtn = m('.btn.wide.help', args.canpull ?
+        { onclick: args.onpull } :
+        { className: 'hide' } , 'Pull');
   var buttons = m('.buttons', [
     m('.btn.round.sort', args.cansort ?
         { onclick: args.onsort } :
@@ -32,10 +35,7 @@ module.exports = function(args) {
     m('.btn.wide.help', args.canhelp ?
         { onclick: args.onhelp } :
         { className: 'hide' } , 'Ask God'),
-    m('.btn.round.help', args.canpull ?
-        { onclick: args.onpull } :
-        { className: 'hide' } , 'Pull'),
   ]);
 
-  return m('.actions', [ slots, buttons ]);
+  return m('.actions', [ slots, pullBtn, buttons ]);
 }

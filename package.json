@@ -19,6 +19,7 @@
     "gulp-concat-js": "^0.1.0",
     "gulp-sourcemaps": "^1.6.0",
     "gulp-util": "^3.0.7",
+    "gutil": "^1.6.4",
     "vinyl-transform": "^1.0.0"
   }
 }

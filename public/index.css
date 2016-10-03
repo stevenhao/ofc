@@ -1,5 +1,6 @@
 body {
   background-color: #4c93c2;
+  font: 12px 'Noto Sans','Lucida Grande','Lucida Sans Unicode',Geneva,Verdana,Sans-Serif;
 }
 textarea.edit {
   word-wrap: break-word;
@@ -129,10 +130,6 @@ text {
 }
 .row {
   position: relative;
-}
-
-body {
-  font-family: arial,sans-serif;
 }
 
 .discarded .card {
