@@ -4,10 +4,12 @@ const double fl_bonus = 10;
 
 struct trial_result {
   double score; // = matchup + rph + fl * fl_bonus
+  double scoresq; // = matchup + rph + fl * fl_bonus
   double rph;
   double foul; // 0 or 1
   double fl; // 0 or 1
   double matchup; // -6...6
+  double trials;
 
   bool operator< (trial_result const &o) const {
     return score < o.score;
@@ -25,8 +27,8 @@ struct trial_result {
 
 vector<pair<hand, int> > go(row &r, vector<card> &v, int len);
 vector<pair<hand, int> > beats(hand h, vector<pair<hand, int> > &v);
-trial_result const FOUL = {-3, 0, 1, 0, -3};
-trial_result const ZERO = {0, 0, 0, 0, 0};
+trial_result const FOUL = {-3, 0, 1, 0, -3, 1};
+trial_result const ZERO = {0, 0, 0, 0, 0, 1};
 
 trial_result scoreRows(hand top, hand mid, hand bot) {
   if (top > mid || mid > bot) { return FOUL; }
@@ -37,16 +39,12 @@ trial_result scoreRows(hand top, hand mid, hand bot) {
   return { matchup + rph + fl * fl_bonus, rph, 0, fl, matchup };
 }
 
-trial_result run_trial0(row top, row mid, row bot) {
-  return scoreRows(_hand(top), _hand(mid), _hand(bot));
-}
-
 /*
  * B must be complete
  */
 trial_result run_trial0(board B) {
   row top = B[0], mid = B[1], bot = B[2];
-  return run_trial0(top, mid, bot);
+  return scoreRows(_hand(top), _hand(mid), _hand(bot));
 }
 
 /*

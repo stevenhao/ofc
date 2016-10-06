@@ -13,7 +13,7 @@ board _board(row a, row b, row c) {
 
 void disp(row r, string sep=" ") {
   string ranks = "..23456789TJQKA", suits = "CDHS";
-  cout << "ROW(";
+  cout << "DBG: ROW(";
   for (card c: r) {
     cout << ranks[c.Rank] << char(tolower(suits[c.Suit])) << " ";
   }
@@ -25,7 +25,7 @@ void disp(hand h, string sep = " ") {
 }
 
 void disp(board B, string sep=" ", string sep2 = "\n") {
-  cout << "BOARD(";
+  cout << "DBG: BOARD(";
   for (row r: B) {
     cout << sep2;
     disp(r, "");

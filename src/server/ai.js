@@ -1,5 +1,20 @@
 var rpc = require('node-json-rpc');
+var colors = require('colors');
 var serv = new rpc.Server({ port: 7000, strict: false });
+
+var logger = (function() {
+  var logger = {};
+  logger.red = function() {
+    console.log(Array.from(arguments).join(' ').red);
+  };
+  logger.blue = function() {
+    console.log(Array.from(arguments).join(' ').blue);
+  };
+  logger.white = function() {
+    console.log(Array.from(arguments).join(' ').white);
+  };
+  return logger;
+})();
 
 var cpp = (function() {
   var cpp = {};
@@ -9,95 +24,99 @@ var cpp = (function() {
   var cbks = {};
   var qid = 0;
   subp.stdout.on('data', (data) => {
-    console.log('cpp: on data', data);
     data = data + '';
     data.split('\n').forEach(function(line) {
+      logger.blue('cpp stdout:', line);
       if (line.length == 0) return;
-      var response;
-      try {
-        response = JSON.parse(line);
-      } catch (e) {}
-      console.log('response', response);
-      cbks[line.id](response.result);
+      if (line.startsWith("DBG: ")) {
+        logger.blue('cpp dbg:', line);
+      } else if (line.startsWith("ERR: ")) {
+        logger.red('cpp dbg:', line);
+      } else {
+        var response;
+        try {
+          response = JSON.parse(line);
+        } catch (e) {
+          logger.red('parse error:', line, e);
+          return;
+        }
+        var qid = response.id;
+        logger.white('response[' + qid + ']', JSON.stringify(response));
+        cbks[qid](response.result);
+      }
     });
   });
 
   cpp.call = function(name, params, cbk) {
-    console.log('cpp: calling', name, params);
     ++qid;
+    logger.white('call[' + qid + ']', name);
     var query = {id: qid, name: name, params: params};
-    console.log('cpp: writing', JSON.stringify(query));
-    subp.stdin.cork();
-    subp.stdin.write(JSON.stringify(query));
-    subp.stdin.uncork();
-    console.log('cpp: saving callback');
+    logger.white('args:', JSON.stringify(query));
+    subp.stdin.write(JSON.stringify(query) + '\n');
     cbks[qid] = cbk;
   };
 
   return cpp;
 })();
 
-cpp.call('evaluate', [1, 2, 3], function(result) {
+cpp.call('getMoves', {
+  state: {
+    board: [[], [], []],
+    discard: [],
+    oboard: [[], [], []],
+    pull: ['As', 'Ks', 'Qs', 'Js' ,'Ts'],
+  }
+}, function(result) {
   console.log('main: final answer', result);
 });
 
-
 var ai = {};
-ai.validate = function(query) {
-  console.log('validate', query);
-  console.log(query.board && query.discard);
-  console.log(query.oboard && query.pull);
-  return query.board && query.discard && query.oboard && query.pull;
+ai.validateMove = function(move, state) {
+  return true;
+};
+ai.validateSeed = function(seed) {
+  return seed;
+};
+ai.validateCard = function(card) {
+  return true;
+};
+ai.validateRow = function(row) {
+  return true;
+};
+ai.validateBoard = function(board) {
+  return true;
+};
+ai.validateState = function(state) {
+  return state.board && state.discard && state.oboard && state.pull;
 };
 
 ai.getMoves = function (Q, callback) {
-  var query = Q[0];
-  console.log('ai: getMoves', query);
+  var state = Q[0];
+  console.log('ai: getMoves', state);
   var error, result;
-  if (!ai.validate(query)) {
+  if (!ai.validateState(state)) {
     error = { code: -32602, message: "Invalid params" };
     callback(error, result);
   } else {
-    // cpp.stdin.write(JSON.stringify(query...));
-    // cpp.stdout.once('data', (data) => {
-    //   result = JSON.parse(data);
-    //   callback(error, result);
-    // });
-
-    var rows = [
-      {play: [-1, 1, 1]},
-      {play: [0, -1, 2]},
-      {play: [0, -1, 1]},
-    ];
-    result = rows;
-    callback(error, result);
+    var query = {state: state};
+    cpp.call('getMoves', query, function(result) {
+      callback(error, result);
+    });
   }
 };
 
 ai.evaluate = function (Q, callback) {
-  var query = Q[0], move = Q[1];
-  console.log('ai: evaluate', query);
+  var state = Q[0], move = Q[1], seed = Q[2];
+  console.log('ai: evaluate', state, move, seed);
   var error, result;
-  if (!ai.validate(query)) {
+  if (!(ai.validateState(state) && ai.validateMove(move) && ai.validateSeed(seed))) {
     error = { code: -32602, message: "Invalid params" };
     callback(error, result);
   } else {
-    // cpp.stdin.write(JSON.stringify(query...));
-    // cpp.stdout.once('data', (data) => {
-    //   result = JSON.parse(data);
-    //   callback(error, result);
-    // });
-
-    result = {
-      trials: 10,
-      rph: 100,
-      fl: 8,
-      foul: 1,
-      matchup: 48,
-      score: 180,
-      scoresq: 4000,
-    };
-    callback(error, result);
+    var query = {state: state, move: move, seed: seed};
+    cpp.call('evaluate', query, function(result) {
+      callback(error, result);
+    });
   }
 };
 

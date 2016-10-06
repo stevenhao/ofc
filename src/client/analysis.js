@@ -15,9 +15,10 @@ var Analysis = {
     this.think = function() {
       if (thinking) return;
       if (moves) {
+        var seed = Math.floor(Math.random() * 10000);
         moves.forEach(function(move, i) {
           thinking++;
-          Client.evaluate(query, move.play, function(data) {
+          Client.evaluate(query, move.play, seed, function(data) {
             move.trials += data.trials;
             move.rph += data.rph;
             move.foul += data.foul;
