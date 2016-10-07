@@ -1,0 +1,125 @@
+body {
+  background-image: linear-gradient(to bottom, #d7d7d7 0%, #eeeeee 116px);
+  background-color: #d7d7d7;
+  width: 100%;
+  height: 100%;
+}
+body .pane {
+  width: 49%;
+  height: 100%;
+  border: 1px dashed black;
+}
+body .left {
+  float: left;
+}
+body .right {
+  float: right;
+}
+body .vpane {
+  height: 30%;
+  padding-left: 4%;
+  padding-top: 4%;
+  padding-bottom: 4%;
+  padding-right: 4%;
+}
+.slot {
+  display: inline-block;
+  position: relative;
+  width: 20%;
+  cursor: default;
+}
+.slot .card {
+  width: 100%;
+  display: table-cell;
+}
+.slot .card rect {
+  fill: #FFF;
+  stroke: #CCC;
+  stroke-width: 3;
+  rx: 25;
+}
+.slot .card text {
+  font-family: 'Marker Felt', 'Comic Sans MS', 'Arial';
+}
+.slot .card.blank {
+  border: 1px transparent;
+  border-radius: 0;
+}
+.slot .card.blank rect {
+  fill: #f4f4f4;
+  stroke: #222b22;
+}
+.upper .board {
+  width: 100px;
+  height: 75px;
+  margin-top: 10px;
+}
+.upper .pull {
+  margin-top: 10px;
+}
+.upper .pull .row {
+  width: 100px;
+  height: 25px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.upper .pull button {
+  display: inline-block;
+  vertical-align: middle;
+}
+.lower table .board {
+  width: 44px;
+  height: 33px;
+}
+.lower table .board:hover {
+  width: 88px;
+  height: 66px;
+}
+.lower table td.board-wrapper {
+  width: 90px;
+}
+.editable .slot input {
+  z-index: -1;
+  font-size: 10pt;
+  text-align: center;
+  vertical-align: middle;
+  position: absolute;
+  left: 4%;
+  top: 2.5%;
+  width: 92%;
+  height: 95%;
+  outline: none;
+  border: none;
+}
+.editable .slot input:focus {
+  z-index: 2;
+}
+.editable .slot:hover input {
+  z-index: 2;
+}
+table {
+  margin-top: 10px;
+  border-color: #808080;
+  border-collapse: collapse ;
+  color: #707070;
+  font-size: 12px ;
+  text-shadow: #ffffff 0px 1px 0px;
+  width: 90% ;
+}
+table thead tr {
+  border: 1px solid grey;
+  background-color: rgba(255, 255, 255, 0.6);
+  background-color: rgba(255, 255, 255, 0.1);
+  height: 20px;
+}
+table thead td {
+  text-shadow: 0 1px 0 #FFF;
+  font-weight: 100;
+  font-family: 'Roboto';
+}
+table tbody tr {
+  border: 1px solid grey;
+  background-color: rgba(255, 255, 255, 0.6);
+  width: 60%;
+  height: 40px;
+}
