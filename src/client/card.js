@@ -57,6 +57,7 @@ function drawFoul(card, showGrid) {
 
 module.exports = function(card, options) {
   options = options || {};
+  if (card.length != 2) options.blank = true;
   if (options.blank) {
     return m('svg.card.blank', {
       viewBox:'0 0 200 250',

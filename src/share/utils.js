@@ -1,4 +1,17 @@
 var U = {
+  chain: function() {
+    var fns = arguments;
+    return function(x) {
+      var i;
+      for (i = fns.length - 1; i >= 0; --i) {
+        x = fns[i](x);
+      }
+      return x;
+    }
+  },
+  lower: function(s) {
+    return s.lower();
+  },
   c: function(x) { return function() { return U.clone(x) } },
 
   nop: function() {},

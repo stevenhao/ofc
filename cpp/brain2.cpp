@@ -1,16 +1,23 @@
 #include "pineapple.cpp"
+#include "./dbg.cpp"
 
 const double fl_bonus = 10;
 
+typedef vector<int> play;
 struct trial_result {
-  double score; // = matchup + rph + fl * fl_bonus
-  double scoresq; // = matchup + rph + fl * fl_bonus
+  double score;
   double rph;
-  double foul; // 0 or 1
-  double fl; // 0 or 1
   double matchup; // -6...6
-  double trials;
+  bool fl; // 0 or 1
+  bool foul; // 0 or 1
 
+  trial_result(double _rph, double _matchup, bool _fl=false, bool _foul=false) {
+    score = _rph + _matchup + (_fl ? fl_bonus : 0);
+    rph = _rph;
+    matchup = _matchup;
+    fl = _fl;
+    foul = _foul;
+  }
   bool operator< (trial_result const &o) const {
     return score < o.score;
   }
@@ -25,18 +32,59 @@ struct trial_result {
   }
 };
 
+struct batch_trial_result {
+  double scoresq;
+  double score;
+  double rph;
+  double matchup;
+  int trials;
+  double fl;
+  double foul;
+  batch_trial_result() {
+    scoresq = score = rph = matchup = trials = fl = foul = 0;
+  }
+
+
+  batch_trial_result operator+ (trial_result t) {
+    trials += 1;
+    scoresq += t.score * t.score;
+    score += t.score;
+    rph += t.rph;
+    matchup += t.matchup;
+    fl += t.fl;
+    foul += t.foul;
+    return *this;
+  }
+  bool operator< (trial_result const &o) const {
+    return score < o.score;
+  }
+  bool operator<= (trial_result const &o) const {
+    return score <= o.score;
+  }
+  bool operator>= (trial_result const &o) const {
+    return score >= o.score;
+  }
+  bool operator> (trial_result const &o) const {
+    return score > o.score;
+  }
+};
+
+
 vector<pair<hand, int> > go(row &r, vector<card> &v, int len);
 vector<pair<hand, int> > beats(hand h, vector<pair<hand, int> > &v);
-trial_result const FOUL = {-3, 0, 1, 0, -3, 1};
-trial_result const ZERO = {0, 0, 0, 0, 0, 1};
+vector<play> allPlays(board B, vector<card> pull, int toDiscard);
+
+board apply(board B, vector<card> pull, play p);
+
+trial_result const FOUL(0, -3, false, true);
+trial_result const ZERO(0, 0, false, false);
 
 trial_result scoreRows(hand top, hand mid, hand bot) {
   if (top > mid || mid > bot) { return FOUL; }
 
   double rph = royalty(0, top) + royalty(1, mid) + royalty(2, bot);
-  double matchup = 1; // idk for now
-  double fl = isFL(top) ? 1 : 0;
-  return { matchup + rph + fl * fl_bonus, rph, 0, fl, matchup };
+  double matchup = 0;
+  return trial_result(rph, matchup, isFL(top), false);
 }
 
 /*
@@ -50,13 +98,19 @@ trial_result run_trial0(board B) {
 /*
  * Naive -- assumes perfect vision (you can see all your future pulls)
  */
-trial_result run_trial1(board _B, vector<card> used, int seed) {
+trial_result run_trial1(board _B, vector<card> &used, int seed) {
   row top = _B[0], mid = _B[1], bot = _B[2];
   int rem = 13 - top.size() - mid.size() - bot.size();
   if (rem == 0) {
     return run_trial0(_B);
   }
-  int pullSize = (13 - rem) * 3 / 2;
+
+  int pullSize = rem;
+  if (pullSize == 8) pullSize += 3;
+  else if (pullSize == 6) pullSize += 3;
+  else if (pullSize == 4) pullSize += 2;
+  else if (pullSize == 2) pullSize += 1;
+
   vector<card> r = usedDeck(used, seed);
   row pull = row(r.begin(), r.begin() + pullSize);
   vector<pair<hand, int> > A = go(top, pull, 3);
@@ -91,6 +145,7 @@ trial_result run_trial1(board _B, vector<card> used, int seed) {
   for (auto b: beats(trips, B)) {
     hand mid = b.first;
     for (auto c: beats(mid, C)) {
+      if (b.second & c.second) continue;
       hand bot = c.first;
       trial_result val = scoreRows(empty, mid, bot);
       if (val <= ans) continue;
@@ -124,8 +179,10 @@ trial_result run_trial1(board _B, vector<card> used, int seed) {
     for (auto a: A) {
       if (ans >= ZERO) break;
       for (auto b: beats(a.first, B)) {
+        if (a.second & b.second) continue;
         if (ans >= ZERO) break;
         for (auto c: beats(b.first, C)) {
+          if ((a.second | b.second) & c.second) continue;
           ans = ZERO;
           break;
         }
@@ -133,6 +190,36 @@ trial_result run_trial1(board _B, vector<card> used, int seed) {
     }
   }
   return ans;
+}
+
+play bestMoveFast(board B, vector<card> used, row pull) {
+  vector<play> all = allPlays(B, pull, 1);
+  vector<pair<double, pair<play, board>>> v;
+  for (play p: all) {
+    v.emplace_back(0, pair<play, board>(p, apply(B, pull, p)));
+  }
+
+  int its = 2;
+  for(int i = 0; i < its; ++i) {
+    for(int j = 0; j < v.size(); ++j) {
+      trial_result trial = run_trial1(v[j].second.second, used, -1);
+      v[j].first += -trial.score;
+    }
+  }
+
+  sort(v.begin(), v.end());
+  v.erase(v.begin() + 2, v.end());
+
+  its = 3;
+  for(int i = 0; i < its; ++i) {
+    for(int j = 0; j < v.size(); ++j) {
+      trial_result trial = run_trial1(v[j].second.second, used, -1);
+      v[j].first += -trial.score;
+    }
+  }
+
+  sort(v.begin(), v.end());
+  return v.front().second.first;
 }
 
 /*
@@ -146,11 +233,21 @@ trial_result run_trial2(board B, vector<card> used, int seed) {
     return run_trial0(B);
   }
 
-  trial_result sum = ZERO;
-  row r = usedDeck(used, seed); // seed determines the rest of the deck
+  row r = usedDeck(used, 10 * seed); // seed determines the rest of the deck
 
-
-  return sum;
+  vector<card> curUsed = used;
+  while (sz(B) < 13) {
+    int pullsize = sz(B) == 0 ? 5 : 3;
+    row pull = row(r.begin(), r.begin() + pullsize);
+    r.erase(r.begin(), r.begin() + pullsize);
+    curUsed.insert(curUsed.end(), pull.begin(), pull.end());
+    play pp = bestMoveFast(B, curUsed, pull);
+    B = apply(B, pull, pp);
+    int otherSize = curUsed.size() == 5 ? 5 : 2;
+    curUsed.insert(curUsed.end(), r.end() - otherSize, r.end());
+    r.erase(r.end() - otherSize, r.end());
+  }
+  return run_trial0(B);
 }
 
 int ppcnt(int x) {
@@ -193,6 +290,7 @@ vector<pair<hand, int> > go(row &r, vector<card> &v, int len) {
   for (int i = 0; i < rs; ++i) {
     rr[i] = r[i];
   }
+
   for(auto &sbset: chs[n][p]) {
     int idx = rs;
     for(int i: sbset.second) {
@@ -204,15 +302,6 @@ vector<pair<hand, int> > go(row &r, vector<card> &v, int len) {
   }
   sort(ret.begin(), ret.end());
   return ret;
-}
-
-typedef vector<int> play;
-void apply(board &B, play &p, vector<card> &pull) {
-  for (int i = 0; i < pull.size(); ++i) {
-    if (p[i]) {
-      B[p[i] - 1].push_back(pull[i]);
-    }
-  }
 }
 
 vector<play> allPlays(board B, vector<card> pull, int toDiscard) {
@@ -238,6 +327,56 @@ vector<play> allPlays(board B, vector<card> pull, int toDiscard) {
     if (a <= 3 && b <= 5 && c <= 5 && discard == toDiscard) {
       ret.push_back(p);
     }
+  }
+  return ret;
+}
+
+board apply(board B, vector<card> pull, play p) {
+  for(int i = 0; i < p.size(); ++i) {
+    int ridx = p[i] - 1;
+    if (ridx != -1) {
+      B[ridx].push_back(pull[i]);
+    }
+  }
+  return B;
+}
+
+vector<play> bestKPlays(int K, board B, vector<card> pull, int toDiscard, vector<card> used, int seed) {
+  vector<play> all = allPlays(B, pull, toDiscard);
+  vector<pair<double, pair<play, board>>> v;
+  for (play p: all) {
+    v.emplace_back(0, pair<play, board>(p, apply(B, pull, p)));
+  }
+
+  if (v.size() >= 4 * K) {
+    int its = 10 + 100 / v.size();
+    for(int i = 0; i < its; ++i) {
+      for(int j = 0; j < v.size(); ++j) {
+        trial_result trial = run_trial1(v[j].second.second, used, seed++);
+        v[j].first += -trial.score;
+      }
+    }
+
+    sort(v.begin(), v.end());
+    v.erase(v.begin() + 2 * K, v.end());
+  }
+
+  if (v.size() >= K) {
+    int its = 30 + 100 / v.size();
+    for(int i = 0; i < its; ++i) {
+      for(int j = 0; j < v.size(); ++j) {
+        trial_result trial = run_trial1(v[j].second.second, used, seed++);
+        v[j].first += -trial.score;
+      }
+    }
+
+    sort(v.begin(), v.end());
+    v.erase(v.begin() + K, v.end());
+  }
+
+  vector<play> ret;
+  for (auto i: v) {
+    ret.push_back(i.second.first);
   }
   return ret;
 }

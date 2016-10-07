@@ -22,6 +22,7 @@ var cpp = (function() {
   const subp = spawn('cpp/endpoint');
 
   var cbks = {};
+  var starttimes = {};
   var qid = 0;
   subp.stdout.on('data', (data) => {
     data = data + '';
@@ -41,7 +42,9 @@ var cpp = (function() {
           return;
         }
         var qid = response.id;
-        logger.white('response[' + qid + ']', JSON.stringify(response));
+        var millis = new Date().getTime() - starttimes[qid];
+        var secs = millis / 1000;
+        logger.white('response[' + qid + ']', JSON.stringify(response), ' took ', secs, ' seconds');
         cbks[qid](response.result);
       }
     });
@@ -54,6 +57,7 @@ var cpp = (function() {
     logger.white('args:', JSON.stringify(query));
     subp.stdin.write(JSON.stringify(query) + '\n');
     cbks[qid] = cbk;
+    starttimes[qid] = new Date().getTime();
   };
 
   return cpp;
@@ -65,7 +69,8 @@ cpp.call('getMoves', {
     discard: [],
     oboard: [[], [], []],
     pull: ['As', 'Ks', 'Qs', 'Js' ,'Ts'],
-  }
+  },
+  seed: 10,
 }, function(result) {
   console.log('main: final answer', result);
 });
@@ -91,14 +96,13 @@ ai.validateState = function(state) {
 };
 
 ai.getMoves = function (Q, callback) {
-  var state = Q[0];
-  console.log('ai: getMoves', state);
+  var state = Q[0], seed = Q[1];
   var error, result;
-  if (!ai.validateState(state)) {
+  if (!(ai.validateState(state) && ai.validateSeed(seed))) {
     error = { code: -32602, message: "Invalid params" };
     callback(error, result);
   } else {
-    var query = {state: state};
+    var query = {state: state, seed: seed};
     cpp.call('getMoves', query, function(result) {
       callback(error, result);
     });

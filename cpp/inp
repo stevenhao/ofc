@@ -1,1 +1,1 @@
-{"id":1,"name":"getMoves","params":{"board":[[],[],[]],"discard":[[],[],[]],"oboard":[[],[],[]],"pull":["As","Ks","Qs"]}}
+{"id":8,"name":"evaluate","params":{"state":{"board":[[],[],[]],"pull":["As","Ah","Ks","Kh","5s"],"oboard":[[],[],[]],"discard":[]},"move":[2,0,0,0,1],"seed":7967}}

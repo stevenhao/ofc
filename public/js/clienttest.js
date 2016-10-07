@@ -6951,9 +6951,11 @@ module.exports = (function() {
     query.pull = query.pull || [];
     query.oboard = query.oboard || [[], [], []];
     query.discard = query.discard || [];
+    var int_max = 1000000000;
+    var seed = Math.floor(Math.random() * int_max);
 
     console.log('client: getMoves', query);
-    rpcClient.call({'method': 'getMoves', 'params': [query]},
+    rpcClient.call({'method': 'getMoves', 'params': [query, seed]},
       function(err, res) {
         console.log('client: getMoves result:', res);
         cbk(res.result);

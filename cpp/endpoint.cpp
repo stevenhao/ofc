@@ -1,61 +1,58 @@
 #include <iostream>
 #include "./brain2.cpp"
 #include "./jsonutil.cpp"
+#include "./dbg.cpp"
 
 using namespace nlohmann;
 using namespace std;
-
-#define d(x) cout << "DBG: " << x << "\n"
-#define err(x) cout << "ERR: " << x << "\n"
-#define d2(x) cout << "DBG: " << x << " " << y << "\n"
-#define p(x) cout << "DBG: " << #x << " is " << (x) << "\n"
-
-json doGetMoves(json state) {
+json doGetMoves(json state, int seed) {
    // eg [ {play: [-1, 0, 1]}, {play: [-1, 1, 1]}, {play: [0, 0, -1]}, ]
   json response;
-  d("doGetMoves1");
   board b = j2b(state["board"]);
-  d("doGetMoves1");
   vector<card> pull = j2r(state["pull"]);
-  d("doGetMoves1");
   vector<card> discard = j2r(state["discard"]);
-  d("doGetMoves1");
+  vector<card> used = b[0] + b[1] + b[2] + pull + discard;
+  int toDiscard = pull.size() == 5 ? 0 : 1;
 
-  d("doGetMoves2");
-  vector<play> plays = allPlays(b, pull, 1);
-  if (plays.size() > 10) {
-    plays.erase(plays.begin() + 10, plays.end());
-  }
+  int K = 9;
+  vector<play> plays = bestKPlays(K, b, pull, toDiscard, used, seed);
 
-  d("doGetMoves1");
   for (play p: plays) {
     json obj;
     obj["play"] = p2j(p);
     response.push_back(obj);
   }
 
-  d("doGetMoves2");
   return response;
 }
 
 json doEvaluate(json state, json move, int seed) {
-   // eg [ {play: [-1, 0, 1]}, {play: [-1, 1, 1]}, {play: [0, 0, -1]}, ]
   json response;
-  board b = j2b(state["board"]);
-  vector<card> used;
   vector<card> pull = j2r(state["pull"]);
-  trial_result trial = run_trial1(b, used, seed);
-  trial.trials = 1;
+  vector<card> discard = j2r(state["discard"]);
+  vector<int> play = j2p(move);
+  board b = j2b(state["board"]);
+  vector<card> used = b[0] + b[1] + b[2] + pull + discard;
 
-  response = t2j(trial);
+  board nb = apply(b, pull, play);
+
+  batch_trial_result result;
+  int trials = 10;
+  for(int i = 0; i < trials; ++i) {
+    //trial_result trial = run_trial1(nb, used, seed * trials + i);
+    trial_result trial = run_trial2(nb, used, seed * trials + i);
+    result = result + trial;
+  }
+
+  response = b2j(result);
   return response;
 }
 
 
 bool doQuery() {
+  if (!cin) return false;
   json query, response;
   string line;
-  d(line);
   getline(cin, line);
   try {
     query = json::parse(line);
@@ -66,9 +63,8 @@ bool doQuery() {
 
   string name = (string)(query["name"]).get<string>();
   json params = query["params"];
-  p(name);
   if (name == "getMoves") {
-    response["result"] = doGetMoves(params["state"]);
+    response["result"] = doGetMoves(params["state"], params["seed"]);
   } else if (name == "evaluate") {
     response["result"] = doEvaluate(params["state"], params["move"], params["seed"]);
   } else {
@@ -85,7 +81,9 @@ int main() {
   generateThree();
   while (true) {
     try {
-      doQuery();
+      if (!doQuery()) {
+        break;
+      }
     } catch(...) {
       err("unknown error, not exiting\n");
     }

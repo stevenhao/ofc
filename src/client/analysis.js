@@ -1,98 +1,127 @@
 var U = require('../share/utils');
 var Card = require('./card');
 var Client = require('./client');
+var Editor = require('./editor');
+var BoardEditor = Editor.BoardEditor;
+var PullEditor = Editor.PullEditor;
+
+var Move = function(play) {
+  return {
+    play: play,
+    trials: 0,
+    rph: 0,
+    foul: 0,
+    fl: 0,
+    score: 0,
+    scoresq: 0,
+    update: function(trial) {
+      this.trials += trial.trials;
+      this.score += trial.score;
+      this.scoresq += trial.scoresq;
+      this.rph += trial.rph;
+      this.foul += trial.foul;
+      this.fl += trial.fl;
+      this.S = this.score / this.trials;
+      this.SD = Math.sqrt((this.scoresq / this.trials - this.S * this.S) / this.trials);
+    },
+  };
+};
+
 var Analysis = {
+  model: function(board, oboard, discard, pull) {
+
+    var query = { board: board, oboard: oboard, discard: discard, pull: pull };
+
+    var moves = [];
+
+    var getMoves = function(cbk) {
+      console.log('get moves');
+      Client.getMoves(query, function(data) {
+        moves = data.map(function(move) {
+          return Move(move.play);
+        });
+        cbk();
+      });
+    };
+
+    var runTrials = function(cbk) {
+      var seed = Math.floor(Math.random() * 10000);
+      var waiting = 0;
+      moves.forEach(function(move, i) {
+        waiting++;
+        Client.evaluate(query, move.play, seed, function(data) {
+          move.update(data);
+          if (--waiting == 0) { cbk(); }
+        });
+      });
+    };
+
+    var serverBusy = false;
+    var step = function() {
+      if (serverBusy) return;
+      serverBusy = true;
+
+      if (moves.length > 0) runTrials(function() { serverBusy = false; });
+      else getMoves(function() { serverBusy = false; });
+    };
+
+    this.step = step;
+    this.getMoves = function() { return moves };
+    this.getQuery = function() { return query };
+  },
+
   controller: function(args) {
     args = args || {};
-    var query = args.query || {
-      board: [[], [], []],
-      pull: ['As', 'Ah', 'Ks', 'Kh', '5s'],
-    };
-    console.log('ctrl:', this.query);
-    var rows = [];
-    var moves = null;
-    var thinking = 0;
-    this.think = function() {
-      if (thinking) return;
-      if (moves) {
-        var seed = Math.floor(Math.random() * 10000);
-        moves.forEach(function(move, i) {
-          thinking++;
-          Client.evaluate(query, move.play, seed, function(data) {
-            move.trials += data.trials;
-            move.rph += data.rph;
-            move.foul += data.foul;
-            move.fl += data.fl;
-            move.score += data.score;
-            move.scoresq += data.scoresq;
-            move.S = move.score / move.trials;
-            move.SD = Math.sqrt(move.scoresq / move.trials - move.score * move.score);
-            thinking--;
-            if (!thinking) {
-              m.redraw(true);
-            }
-          });
-        });
-      } else {
-        thinking++;
-        Client.getMoves(query, (function(data) {
-          moves = data.map(function(move) {
-            return {
-              play: move.play,
-              trials: 0,
-              rph: 0,
-              foul: 0,
-              fl: 0,
-              score: 0,
-              scoresq: 0,
-            };
-          });
-          thinking--;
-          this.think();
-        }).bind(this));
+
+    var board = m.prop([[], [], []]);
+    var oboard = m.prop([[], [], []]);
+    var discard = m.prop([]);
+    var pull = m.prop(['As', 'Ks', 'Qs', 'Js', 'Ad']);
+    var model = new Analysis.model(board(), oboard(), discard(), pull());
+
+    var tinterval = -1;
+    var startThinking = function() {
+      if (tinterval == -1) {
+        model.step();
+        tinterval = setInterval(model.step, 1000);
       }
     };
-    this.think();
-    //setInterval(this.think.bind(this), 5000);
-    this.query = function() { return query; }
-    this.rows = function() { return moves || []; }
+
+    var stopThinking = function() {
+      clearInterval(tinterval);
+      tinterval = -1;
+    };
+
+    this.getMoves = model.getMoves;
+    this.getQuery = model.getQuery;
+    this.board = board;
+    this.oboard = oboard;
+    this.discard = discard;
+    this.pull = pull;
+    this.startThinking = startThinking;
+    this.stopThinking = stopThinking;
   },
 
   view: function(ctrl) {
-    function makePull(pull) {
-      pull = U.clone(pull);
-      var r = 1; while (pull.length / r > r * 2 + 5) r += 1;
-      return m('.pull', U.range(r).map(function(i) {
-        return pull.splice(0, Math.floor(pull.length / (r - i)));
-      }).map(function(row) {
-        return m('.row',
-          {style: {'min-width': row.length*40+4 }},
-          row.map(function(card, i) {
-            return m('.slot.clicky', {
-              //onclick: function() { args.onuse(card) },
-            }, Card(card));
-          }));
-      }));
-    }
-
     function makeBoard(board, args) {
       var rowSizes = [3, 5, 5];
       args = args || {};
       var pending = args.pending || [[], [], []];
       return m('.board', board.map(function(row, i) {
-        return m('.row', [
+        var top = 0;
+        return m('.row', { style: { top: top + 'px' } }, [
           m('.cards', (function() {
             var A = row.map(function(card) {
               return m('.slot',
-                Card(card));
+                  Card(card));
             });
             var B = pending[i].map(function(card) {
               return m('.slot',
-                Card(card));
+                  Card(card));
             });
             var C = U.range(rowSizes[i] - A.length - B.length).map(function() {
               return m('.slot',
-                Card('', {blank: true}));
+                  Card('', {blank: true}));
             });
             return A.concat(B).concat(C);
           })()),
@@ -108,9 +137,9 @@ var Analysis = {
         return (a/b*1.).toFixed(1);
       }
       return m('span', [
-          flr(rph, trials),
-          pct(fl, trials),
-          pct(foul, trials),
+        flr(rph, trials),
+        pct(fl, trials),
+        pct(foul, trials),
       ].join('/'));
     }
 
@@ -118,22 +147,39 @@ var Analysis = {
       return m('span', S.toFixed(2));
     }
 
-
-    var rows = ctrl.rows(), query = ctrl.query();
+    var rows = ctrl.getMoves();
+    var query = ctrl.getQuery();
     console.log('view', rows, query);
     return m('.anal', [
       m('.pane.left', [
         m('.vpane.upper', [
-          makeBoard(query.board),
-          makePull(query.pull),
+          m.component(BoardEditor, {
+            oninput: null,
+          }),
+          m.component(BoardEditor, {
+            oninput: null,
+          }),
+          m.component(PullEditor, {
+            cards: ctrl.pull(),
+            oninput: ctrl.pull,
+          }),
         ]),
         m('hr'),
+        m('div', [
+          m('button', {
+            onclick: ctrl.startThinking,
+          }, 'Start'),
+          m('button', {
+            onclick: ctrl.stopThinking,
+          }, 'Stop'),
+        ]),
         m('.vpane.lower', [
           m('table', [
             m('thead', m('tr', [
                 m('td', 'Score'),
                 m('td', 'Move'),
                 m('td', 'Royalty / FL / Foul'),
+                m('td', 'SD(score)'),
             ])),
             m('tbody',
               rows.map(function(row) {
@@ -144,10 +190,10 @@ var Analysis = {
                   pending[idx].push(query.pull[i]);
                 });
                 return m('tr', [
-                  m('td', makeS(row.S)),
-                  m('td', makeBoard(query.board, {pending: pending})),
-                  m('td', makeStats(row.trials, row.rph, row.fl, row.foul)),
-                  m('td', row.SD)
+                    m('td', makeS(row.S)),
+                    m('td.board-wrapper', makeBoard(query.board, {pending: pending})),
+                    m('td', makeStats(row.trials, row.rph, row.fl, row.foul)),
+                    m('td', row.SD.toFixed(2))
                 ]);
               })
             ),

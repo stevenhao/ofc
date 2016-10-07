@@ -7039,102 +7039,131 @@ function BoardView(args) {
 }
 module.exports = BoardView;
 
-},{"../share/utils":43,"./card":36}],34:[function(require,module,exports){
+},{"../share/utils":44,"./card":36}],34:[function(require,module,exports){
 var U = require('../share/utils');
 var Card = require('./card');
 var Client = require('./client');
+var Editor = require('./editor');
+var BoardEditor = Editor.BoardEditor;
+var PullEditor = Editor.PullEditor;
+
+var Move = function(play) {
+  return {
+    play: play,
+    trials: 0,
+    rph: 0,
+    foul: 0,
+    fl: 0,
+    score: 0,
+    scoresq: 0,
+    update: function(trial) {
+      this.trials += trial.trials;
+      this.score += trial.score;
+      this.scoresq += trial.scoresq;
+      this.rph += trial.rph;
+      this.foul += trial.foul;
+      this.fl += trial.fl;
+      this.S = this.score / this.trials;
+      this.SD = Math.sqrt((this.scoresq / this.trials - this.S * this.S) / this.trials);
+    },
+  };
+};
+
 var Analysis = {
+  model: function(board, oboard, discard, pull) {
+
+    var query = { board: board, oboard: oboard, discard: discard, pull: pull };
+
+    var moves = [];
+
+    var getMoves = function(cbk) {
+      console.log('get moves');
+      Client.getMoves(query, function(data) {
+        moves = data.map(function(move) {
+          return Move(move.play);
+        });
+        cbk();
+      });
+    };
+
+    var runTrials = function(cbk) {
+      var seed = Math.floor(Math.random() * 10000);
+      var waiting = 0;
+      moves.forEach(function(move, i) {
+        waiting++;
+        Client.evaluate(query, move.play, seed, function(data) {
+          move.update(data);
+          if (--waiting == 0) { cbk(); }
+        });
+      });
+    };
+
+    var serverBusy = false;
+    var step = function() {
+      if (serverBusy) return;
+      serverBusy = true;
+
+      if (moves.length > 0) runTrials(function() { serverBusy = false; });
+      else getMoves(function() { serverBusy = false; });
+    };
+
+    this.step = step;
+    this.getMoves = function() { return moves };
+    this.getQuery = function() { return query };
+  },
+
   controller: function(args) {
     args = args || {};
-    var query = args.query || {
-      board: [[], [], []],
-      pull: ['As', 'Ah', 'Ks', 'Kh', '5s'],
-    };
-    console.log('ctrl:', this.query);
-    var rows = [];
-    var moves = null;
-    var thinking = 0;
-    this.think = function() {
-      if (thinking) return;
-      if (moves) {
-        var seed = Math.floor(Math.random() * 10000);
-        moves.forEach(function(move, i) {
-          thinking++;
-          Client.evaluate(query, move.play, seed, function(data) {
-            move.trials += data.trials;
-            move.rph += data.rph;
-            move.foul += data.foul;
-            move.fl += data.fl;
-            move.score += data.score;
-            move.scoresq += data.scoresq;
-            move.S = move.score / move.trials;
-            move.SD = Math.sqrt(move.scoresq / move.trials - move.score * move.score);
-            thinking--;
-            if (!thinking) {
-              m.redraw(true);
-            }
-          });
-        });
-      } else {
-        thinking++;
-        Client.getMoves(query, (function(data) {
-          moves = data.map(function(move) {
-            return {
-              play: move.play,
-              trials: 0,
-              rph: 0,
-              foul: 0,
-              fl: 0,
-              score: 0,
-              scoresq: 0,
-            };
-          });
-          thinking--;
-          this.think();
-        }).bind(this));
+
+    var board = m.prop([[], [], []]);
+    var oboard = m.prop([[], [], []]);
+    var discard = m.prop([]);
+    var pull = m.prop(['As', 'Ks', 'Qs', 'Js', 'Ad']);
+    var model = new Analysis.model(board(), oboard(), discard(), pull());
+
+    var tinterval = -1;
+    var startThinking = function() {
+      if (tinterval == -1) {
+        model.step();
+        tinterval = setInterval(model.step, 1000);
       }
     };
-    this.think();
-    //setInterval(this.think.bind(this), 5000);
-    this.query = function() { return query; }
-    this.rows = function() { return moves || []; }
+
+    var stopThinking = function() {
+      clearInterval(tinterval);
+      tinterval = -1;
+    };
+
+    this.getMoves = model.getMoves;
+    this.getQuery = model.getQuery;
+    this.board = board;
+    this.oboard = oboard;
+    this.discard = discard;
+    this.pull = pull;
+    this.startThinking = startThinking;
+    this.stopThinking = stopThinking;
   },
 
   view: function(ctrl) {
-    function makePull(pull) {
-      pull = U.clone(pull);
-      var r = 1; while (pull.length / r > r * 2 + 5) r += 1;
-      return m('.pull', U.range(r).map(function(i) {
-        return pull.splice(0, Math.floor(pull.length / (r - i)));
-      }).map(function(row) {
-        return m('.row',
-          {style: {'min-width': row.length*40+4 }},
-          row.map(function(card, i) {
-            return m('.slot.clicky', {
-              //onclick: function() { args.onuse(card) },
-            }, Card(card));
-          }));
-      }));
-    }
-
     function makeBoard(board, args) {
       var rowSizes = [3, 5, 5];
       args = args || {};
       var pending = args.pending || [[], [], []];
       return m('.board', board.map(function(row, i) {
-        return m('.row', [
+        var top = 0;
+        return m('.row', { style: { top: top + 'px' } }, [
           m('.cards', (function() {
             var A = row.map(function(card) {
               return m('.slot',
-                Card(card));
+                  Card(card));
             });
             var B = pending[i].map(function(card) {
               return m('.slot',
-                Card(card));
+                  Card(card));
             });
             var C = U.range(rowSizes[i] - A.length - B.length).map(function() {
               return m('.slot',
-                Card('', {blank: true}));
+                  Card('', {blank: true}));
             });
             return A.concat(B).concat(C);
           })()),
@@ -7150,9 +7179,9 @@ var Analysis = {
         return (a/b*1.).toFixed(1);
       }
       return m('span', [
-          flr(rph, trials),
-          pct(fl, trials),
-          pct(foul, trials),
+        flr(rph, trials),
+        pct(fl, trials),
+        pct(foul, trials),
       ].join('/'));
     }
 
@@ -7160,22 +7189,39 @@ var Analysis = {
       return m('span', S.toFixed(2));
     }
 
-
-    var rows = ctrl.rows(), query = ctrl.query();
+    var rows = ctrl.getMoves();
+    var query = ctrl.getQuery();
     console.log('view', rows, query);
     return m('.anal', [
       m('.pane.left', [
         m('.vpane.upper', [
-          makeBoard(query.board),
-          makePull(query.pull),
+          m.component(BoardEditor, {
+            oninput: null,
+          }),
+          m.component(BoardEditor, {
+            oninput: null,
+          }),
+          m.component(PullEditor, {
+            cards: ctrl.pull(),
+            oninput: ctrl.pull,
+          }),
         ]),
         m('hr'),
+        m('div', [
+          m('button', {
+            onclick: ctrl.startThinking,
+          }, 'Start'),
+          m('button', {
+            onclick: ctrl.stopThinking,
+          }, 'Stop'),
+        ]),
         m('.vpane.lower', [
           m('table', [
             m('thead', m('tr', [
                 m('td', 'Score'),
                 m('td', 'Move'),
                 m('td', 'Royalty / FL / Foul'),
+                m('td', 'SD(score)'),
             ])),
             m('tbody',
               rows.map(function(row) {
@@ -7186,10 +7232,10 @@ var Analysis = {
                   pending[idx].push(query.pull[i]);
                 });
                 return m('tr', [
-                  m('td', makeS(row.S)),
-                  m('td', makeBoard(query.board, {pending: pending})),
-                  m('td', makeStats(row.trials, row.rph, row.fl, row.foul)),
-                  m('td', row.SD)
+                    m('td', makeS(row.S)),
+                    m('td.board-wrapper', makeBoard(query.board, {pending: pending})),
+                    m('td', makeStats(row.trials, row.rph, row.fl, row.foul)),
+                    m('td', row.SD.toFixed(2))
                 ]);
               })
             ),
@@ -7208,7 +7254,7 @@ var Analysis = {
 };
 module.exports = Analysis;
 
-},{"../share/utils":43,"./card":36,"./client":37}],35:[function(require,module,exports){
+},{"../share/utils":44,"./card":36,"./client":37,"./editor":38}],35:[function(require,module,exports){
 module.exports = (function() {
   var b = {};
 
@@ -7348,6 +7394,7 @@ function drawFoul(card, showGrid) {
 
 module.exports = function(card, options) {
   options = options || {};
+  if (card.length != 2) options.blank = true;
   if (options.blank) {
     return m('svg.card.blank', {
       viewBox:'0 0 200 250',
@@ -7372,7 +7419,7 @@ module.exports = function(card, options) {
 }
 
 
-},{"../share/poker":41}],37:[function(require,module,exports){
+},{"../share/poker":42}],37:[function(require,module,exports){
 
 module.exports = (function() {
   var Client = {};
@@ -7383,9 +7430,11 @@ module.exports = (function() {
     query.pull = query.pull || [];
     query.oboard = query.oboard || [[], [], []];
     query.discard = query.discard || [];
+    var int_max = 1000000000;
+    var seed = Math.floor(Math.random() * int_max);
 
     console.log('client: getMoves', query);
-    rpcClient.call({'method': 'getMoves', 'params': [query]},
+    rpcClient.call({'method': 'getMoves', 'params': [query, seed]},
       function(err, res) {
         console.log('client: getMoves result:', res);
         cbk(res.result);
@@ -7415,6 +7464,92 @@ module.exports = (function() {
 })();
 
 },{"node-json-rpc":28}],38:[function(require,module,exports){
+var U = require('../share/utils');
+var Card = require('./card');
+
+var CardEditor = {
+  view: function(ctrl, args) {
+    function checkCardstr(s) {
+      if (s.length > 1) return s[0] + s.substr(1).toLowerCase();
+      else return s;
+    }
+    args.oninput = args.oninput || U.nop;
+    args.card = args.card || m.prop('');
+    return m('.slot', [
+      m('input', {
+        value: args.card(),
+        oninput: m.withAttr('value', U.chain(args.oninput, args.card, checkCardstr)),
+      }),
+      Card(args.card()),
+    ]);
+  }
+};
+
+var BoardEditor = {
+  controller: function(args) {
+    args.oninput = args.oninput || U.nop;
+    var rowSizes = [3, 5, 5];
+    this.board = rowSizes.map(function(sz) {
+      return U.range(sz).map(function() {
+        return m.prop('');
+      });
+    });
+    this.oninput = function() {
+      args.oninput(this.board);
+    };
+  },
+  view: function(ctrl, args) {
+    var board = ctrl.board;
+    return m('.editable.board', board.map(function(row) {
+      return m('.row', [
+        m('.cards', row.map(function(card) {
+          return m.component(CardEditor, {
+            card: card,
+            oninput: ctrl.oninput,
+          });
+        })),
+      ]);
+    }));
+  }
+};
+
+var PullEditor = {
+  controller: function(args) {
+    args.oninput = args.oninput || U.nop;
+    this.row = (args.cards || ['', '', '']).map(function(card) {
+      return m.prop(card);
+    });
+    this.oninput = function() {
+      args.oninput(this.row);
+    };
+    this.onplus = function() {
+      this.row.push(m.prop(''));
+    };
+    this.onminus = function() {
+      this.row.pop();
+    };
+  },
+  view: function(ctrl) {
+    var row = ctrl.row;
+    return m('.editable.pull', [
+      m('.row', row.map(function(card) {
+        return m.component(CardEditor, {
+          card: card,
+          oninput: ctrl.oninput,
+        });
+      })),
+      m('button', { onclick: ctrl.onplus.bind(ctrl) }, '+'),
+      m('button', { onclick: ctrl.onminus.bind(ctrl) }, '-'),
+    ]);
+  }
+};
+
+module.exports = {
+  BoardEditor: BoardEditor,
+  PullEditor: PullEditor,
+}
+
+},{"../share/utils":44,"./card":36}],39:[function(require,module,exports){
 'use strict';
 
 var U = require('../share/utils');
@@ -7426,6 +7561,7 @@ var Round = require('../share/round');
 var Pineapple = require('../share/pineapple');
 var Brain = require('./brain');
 var Game = require('./game');
+var BoardEditor = require('./editor');
 var Analysis = require('./analysis');
 
 function stupidBrain(ppp) {
@@ -7517,11 +7653,12 @@ var App = {
 m.route.mode = "hash";
 m.route(document.body, "/", {
     "/play": App,
+    "/edit": BoardEditor,
     "/anal": Analysis,
     "/": App,
 });
 
-},{"../share/pineapple":40,"../share/poker":41,"../share/round":42,"../share/utils":43,"./analysis":34,"./brain":35,"./game":39}],39:[function(require,module,exports){
+},{"../share/pineapple":41,"../share/poker":42,"../share/round":43,"../share/utils":44,"./analysis":34,"./brain":35,"./editor":38,"./game":40}],40:[function(require,module,exports){
 var Poker = require('../share/poker');
 var Board = require('./Board');
 var Card = require('./card');
@@ -7662,7 +7799,7 @@ var Game = {
 
 module.exports = Game;
 
-},{"../share/poker":41,"../share/utils":43,"./Actions":32,"./Board":33,"./card":36}],40:[function(require,module,exports){
+},{"../share/poker":42,"../share/utils":44,"./Actions":32,"./Board":33,"./card":36}],41:[function(require,module,exports){
 var p = require('./poker');
 var U = require('./utils');
 module.exports = (function() {
@@ -7777,7 +7914,7 @@ module.exports = (function() {
   return pp;
 })();
 
-},{"./poker":41,"./utils":43}],41:[function(require,module,exports){
+},{"./poker":42,"./utils":44}],42:[function(require,module,exports){
 /*
  * p.lookupTable: object with 6188 keys, mpas sorted-rank-strings to hands,
  * e.g. p.lookupTable['KK444'] = {name: 'Full House', tier: 6, kickerValue: 93}
@@ -7965,7 +8102,7 @@ module.exports = (function() {
   return p;
 })();
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 var U = require('./utils');
 var P = require('./poker');
 var Q = require('./pineapple');
@@ -8080,8 +8217,21 @@ module.exports = (function() {
   return Round;
 })();
 
-},{"./pineapple":40,"./poker":41,"./utils":43}],43:[function(require,module,exports){
+},{"./pineapple":41,"./poker":42,"./utils":44}],44:[function(require,module,exports){
 var U = {
+  chain: function() {
+    var fns = arguments;
+    return function(x) {
+      var i;
+      for (i = fns.length - 1; i >= 0; --i) {
+        x = fns[i](x);
+      }
+      return x;
+    }
+  },
+  lower: function(s) {
+    return s.lower();
+  },
   c: function(x) { return function() { return U.clone(x) } },
 
   nop: function() {},
@@ -8172,4 +8322,4 @@ Array.prototype.remove = function(el) {
 };
 
 
-},{}]},{},[38])
+},{}]},{},[39])

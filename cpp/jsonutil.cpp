@@ -2,18 +2,16 @@
 
 #define d(x) cout << "DBG: " << x << "\n"
 using namespace nlohmann;
+
 row j2r(json j) {
-  d("j2r 1");
   vector<string> v = j.get<vector<string>>();
-  d("j2r 2");
   vector<card> ret;
-  d("j2r 3");
   for (auto i: v) {
     ret.push_back(_card(i));
   }
-  d("j2r 4");
   return ret;
 }
+
 board j2b(json j) {
   vector<row> ret;
   for (json i: j) {
@@ -22,6 +20,15 @@ board j2b(json j) {
   }
   return ret;
 }
+
+play j2p(json j) {
+  vector<int> v = j.get<vector<int>>();
+  for(int i = 0; i < v.size(); ++i) {
+    v[i]++;
+  }
+  return v;
+}
+
 json p2j(play p) {
   json ret;
   for(int r: p) {
@@ -30,14 +37,14 @@ json p2j(play p) {
   return ret;
 }
 
-json t2j(trial_result t) {
+json b2j(batch_trial_result t) {
   json response;
   response["trials"] = t.trials;
+  response["scoresq"] = t.scoresq;
+  response["score"] = t.score;
   response["rph"] = t.rph;
   response["fl"] = t.fl;
   response["foul"] = t.foul;
   response["matchup"] = t.matchup;
-  response["score"] = t.score;
-  response["scoresq"] = t.scoresq;
   return response;
 }

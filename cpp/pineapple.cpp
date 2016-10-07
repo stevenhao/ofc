@@ -3,6 +3,11 @@
 typedef vector<card> row;
 typedef vector<row> board;
 
+row operator+ (row a, row b) {
+  a.insert(a.begin(), b.begin(), b.end());
+  return a;
+}
+
 inline int sz(board &b) {
   return b[0].size() + b[1].size() + b[2].size();
 }

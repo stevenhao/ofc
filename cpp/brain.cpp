@@ -287,11 +287,6 @@ double evaluate2(board &B, vector<card> &used, int seed, bool verbose=false) {
       curUsed.insert(curUsed.end(), pull.begin(), pull.end());
       pair<double, play> pp = bestMoveFast(curB, curUsed, pull);
       apply(curB, pp.second, pull);
-      int otherSize = curUsed.size() == 5 ? 5 : 2;
-     // otherSize *= 2;
-      curUsed.insert(curUsed.end(), r.end() - otherSize, r.end());
-      r.erase(r.end() - otherSize, r.end());
-      score = pp.first;
     }
     if (verbose) {
       cout << "ended at "; disp(curB, ",", " "); cout << " " << score << "\n";

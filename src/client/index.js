@@ -9,6 +9,7 @@ var Round = require('../share/round');
 var Pineapple = require('../share/pineapple');
 var Brain = require('./brain');
 var Game = require('./game');
+var BoardEditor = require('./editor');
 var Analysis = require('./analysis');
 
 function stupidBrain(ppp) {
@@ -100,6 +101,7 @@ var App = {
 m.route.mode = "hash";
 m.route(document.body, "/", {
     "/play": App,
+    "/edit": BoardEditor,
     "/anal": Analysis,
     "/": App,
 });
