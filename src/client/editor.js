@@ -22,19 +22,29 @@ var CardEditor = {
 var BoardEditor = {
   controller: function(args) {
     args.oninput = args.oninput || U.nop;
+
     var rowSizes = [3, 5, 5];
-    this.board = rowSizes.map(function(sz) {
-      return U.range(sz).map(function() {
-        return m.prop('');
+    var cards = (args.board || [['', '', ''], ['', '', '', '', ''], ['', '', '', '', '']]).map(function(row) {
+      return row.map(function(card) {
+        return m.prop(card);
       });
     });
-    this.oninput = function() {
-      args.oninput(this.board);
+    var oninput = function() {
+      var board = cards.map(function(row) {
+        return row.map(function(card) {
+          return card();
+        });
+      });
+      args.oninput(board);
     };
+
+    this.cards = cards;
+    this.oninput = oninput;
   },
   view: function(ctrl, args) {
-    var board = ctrl.board;
-    return m('.editable.board', board.map(function(row) {
+    var cards = ctrl.cards;
+    console.log('boardeditor: view:', cards);
+    return m('.editable.board', cards.map(function(row) {
       return m('.row', [
         m('.cards', row.map(function(card) {
           return m.component(CardEditor, {
@@ -50,23 +60,33 @@ var BoardEditor = {
 var PullEditor = {
   controller: function(args) {
     args.oninput = args.oninput || U.nop;
-    this.row = (args.cards || ['', '', '']).map(function(card) {
+    var cards = (args.pull || ['', '', '']).map(function(card) {
       return m.prop(card);
     });
-    this.oninput = function() {
-      args.oninput(this.row);
+    var oninput = function() {
+      var pull = cards.map(function(card) {
+        return card();
+      });
+      args.oninput(pull);
     };
-    this.onplus = function() {
-      this.row.push(m.prop(''));
+    var onplus = function() {
+      cards.push(m.prop(''));
+      oninput();
     };
-    this.onminus = function() {
-      this.row.pop();
+    var onminus = function() {
+      cards.pop();
+      oninput();
     };
+
+    this.cards = cards;
+    this.oninput = oninput;
+    this.onplus = onplus;
+    this.onminus = onminus;
   },
   view: function(ctrl) {
-    var row = ctrl.row;
+    var cards = ctrl.cards;
     return m('.editable.pull', [
-      m('.row', row.map(function(card) {
+      m('.row', cards.map(function(card) {
         return m.component(CardEditor, {
           card: card,
           oninput: ctrl.oninput,

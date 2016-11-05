@@ -7,7 +7,9 @@ row j2r(json j) {
   vector<string> v = j.get<vector<string>>();
   vector<card> ret;
   for (auto i: v) {
-    ret.push_back(_card(i));
+    if (i.size() > 0) {
+      ret.push_back(_card(i));
+    }
   }
   return ret;
 }

@@ -5,9 +5,10 @@ body {
   height: 100%;
 }
 body .pane {
-  width: 49%;
+  width: 45%;
   height: 100%;
   border: 1px dashed black;
+  padding: 2%;
 }
 body .left {
   float: left;
@@ -15,12 +16,13 @@ body .left {
 body .right {
   float: right;
 }
-body .vpane {
-  height: 30%;
-  padding-left: 4%;
-  padding-top: 4%;
-  padding-bottom: 4%;
-  padding-right: 4%;
+.cards {
+  display: flex;
+  flex-direction: horizontal;
+  justify-content: center;
+}
+.cards .slot {
+  flex-basis: auto;
 }
 .slot {
   display: inline-block;
@@ -49,33 +51,39 @@ body .vpane {
   fill: #f4f4f4;
   stroke: #222b22;
 }
-.upper .board {
-  width: 100px;
-  height: 75px;
+.left .editors {
+  float: left;
+}
+.left .editors .board {
+  width: 200px;
+  height: 150px;
   margin-top: 10px;
 }
-.upper .pull {
+.left .editors .pull {
   margin-top: 10px;
 }
-.upper .pull .row {
-  width: 100px;
-  height: 25px;
+.left .editors .pull .row {
+  width: 200px;
+  height: 50px;
   display: inline-block;
   vertical-align: middle;
 }
-.upper .pull button {
+.left .editors .pull button {
   display: inline-block;
   vertical-align: middle;
 }
-.lower table .board {
-  width: 44px;
-  height: 33px;
+.left .analyze-btn {
+  float: right;
 }
-.lower table .board:hover {
-  width: 88px;
-  height: 66px;
+.right table .board {
+  width: 60px;
+  height: 45px;
 }
-.lower table td.board-wrapper {
+.right table .board:hover {
+  width: 120px;
+  height: 90px;
+}
+.right table td.board-wrapper {
   width: 90px;
 }
 .editable .slot input {

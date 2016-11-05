@@ -107,7 +107,7 @@ trial_result run_trial1(board _B, vector<card> &used, int seed) {
 
   int pullSize = rem;
   if (pullSize == 8) pullSize += 3;
-  else if (pullSize == 6) pullSize += 3;
+  else if (pullSize == 6) pullSize += 2;
   else if (pullSize == 4) pullSize += 2;
   else if (pullSize == 2) pullSize += 1;
 
@@ -349,7 +349,7 @@ vector<play> bestKPlays(int K, board B, vector<card> pull, int toDiscard, vector
   }
 
   if (v.size() >= 4 * K) {
-    int its = 10 + 100 / v.size();
+    int its = 20 + 100 / v.size();
     for(int i = 0; i < its; ++i) {
       for(int j = 0; j < v.size(); ++j) {
         trial_result trial = run_trial1(v[j].second.second, used, seed++);
@@ -358,11 +358,11 @@ vector<play> bestKPlays(int K, board B, vector<card> pull, int toDiscard, vector
     }
 
     sort(v.begin(), v.end());
-    v.erase(v.begin() + 2 * K, v.end());
+    v.erase(v.begin() + 4 * K, v.end());
   }
 
   if (v.size() >= K) {
-    int its = 30 + 100 / v.size();
+    int its = 60 + 100 / v.size();
     for(int i = 0; i < its; ++i) {
       for(int j = 0; j < v.size(); ++j) {
         trial_result trial = run_trial1(v[j].second.second, used, seed++);

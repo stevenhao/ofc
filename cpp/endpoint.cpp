@@ -11,7 +11,8 @@ json doGetMoves(json state, int seed) {
   board b = j2b(state["board"]);
   vector<card> pull = j2r(state["pull"]);
   vector<card> discard = j2r(state["discard"]);
-  vector<card> used = b[0] + b[1] + b[2] + pull + discard;
+  board ob = j2b(state["oboard"]);
+  vector<card> used = b[0] + b[1] + b[2] + ob[0] + ob[1] + ob[2] + pull + discard;
   int toDiscard = pull.size() == 5 ? 0 : 1;
 
   int K = 9;
@@ -32,12 +33,14 @@ json doEvaluate(json state, json move, int seed) {
   vector<card> discard = j2r(state["discard"]);
   vector<int> play = j2p(move);
   board b = j2b(state["board"]);
-  vector<card> used = b[0] + b[1] + b[2] + pull + discard;
+  board ob = j2b(state["oboard"]);
+  vector<card> used = b[0] + b[1] + b[2] + ob[0] + ob[1] + ob[2] + pull + discard;
 
   board nb = apply(b, pull, play);
 
   batch_trial_result result;
-  int trials = 10;
+  int bsize = sz(b);
+  int trials = bsize == 0 ? 20 : (bsize == 5 ? 100 : 300);
   for(int i = 0; i < trials; ++i) {
     //trial_result trial = run_trial1(nb, used, seed * trials + i);
     trial_result trial = run_trial2(nb, used, seed * trials + i);

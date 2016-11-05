@@ -7049,6 +7049,8 @@ var PullEditor = Editor.PullEditor;
 
 var Move = function(play) {
   return {
+    S: 0,
+    SD: 0,
     play: play,
     trials: 0,
     rph: 0,
@@ -7086,6 +7088,12 @@ var Analysis = {
       });
     };
 
+    var sortMoves = function() {
+      moves.sort(function(a, b) {
+        return b.score - a.score;
+      });
+    };
+
     var runTrials = function(cbk) {
       var seed = Math.floor(Math.random() * 10000);
       var waiting = 0;
@@ -7101,10 +7109,19 @@ var Analysis = {
     var serverBusy = false;
     var step = function() {
       if (serverBusy) return;
-      serverBusy = true;
+      function start() {
+        serverBusy = true;
+        m.startComputation();
+      }
+      function end() {
+        m.endComputation();
+        serverBusy = false;
+      }
 
-      if (moves.length > 0) runTrials(function() { serverBusy = false; });
-      else getMoves(function() { serverBusy = false; });
+      start();
+      if (moves.length > 0) runTrials(end);
+      else getMoves(end);
+      sortMoves();
     };
 
     this.step = step;
@@ -7115,13 +7132,18 @@ var Analysis = {
   controller: function(args) {
     args = args || {};
 
-    var board = m.prop([[], [], []]);
-    var oboard = m.prop([[], [], []]);
+    var board = m.prop([['', '', ''], ['', '', '', '', ''], ['', '', '', '', '']]);
+    var oboard = m.prop([['', '', ''], ['', '', '', '', ''], ['', '', '', '', '']]);
     var discard = m.prop([]);
     var pull = m.prop(['As', 'Ks', 'Qs', 'Js', 'Ad']);
     var model = new Analysis.model(board(), oboard(), discard(), pull());
 
     var tinterval = -1;
+    var reset = function() {
+      model = new Analysis.model(board(), oboard(), discard(), pull());
+      console.log('reset. moves:', model.getMoves());
+    };
+
     var startThinking = function() {
       if (tinterval == -1) {
         model.step();
@@ -7134,19 +7156,34 @@ var Analysis = {
       tinterval = -1;
     };
 
-    this.getMoves = model.getMoves;
-    this.getQuery = model.getQuery;
+    var resetAndStart = function() {
+      stopThinking();
+      reset();
+      startThinking();
+    };
+
+    var getMoves = function() {
+      return model.getMoves();
+    };
+
+    var getQuery = function() {
+      return model.getQuery();
+    };
+
+    this.getMoves = getMoves;
+    this.getQuery = getQuery;
     this.board = board;
     this.oboard = oboard;
     this.discard = discard;
     this.pull = pull;
+    this.reset = reset;
+    this.resetAndStart = resetAndStart;
     this.startThinking = startThinking;
     this.stopThinking = stopThinking;
   },
 
   view: function(ctrl) {
     function makeBoard(board, args) {
-      var rowSizes = [3, 5, 5];
       args = args || {};
       var pending = args.pending || [[], [], []];
       return m('.board', board.map(function(row, i) {
@@ -7154,18 +7191,11 @@ var Analysis = {
         return m('.row', { style: { top: top + 'px' } }, [
           m('.cards', (function() {
             var A = row.map(function(card) {
+              if (card == '' && pending[i].length) card = pending[i].splice(0, 1)[0];
               return m('.slot',
                   Card(card));
             });
-            var B = pending[i].map(function(card) {
-              return m('.slot',
-                  Card(card));
-            });
-            var C = U.range(rowSizes[i] - A.length - B.length).map(function() {
-              return m('.slot',
-                  Card('', {blank: true}));
-            });
-            return A.concat(B).concat(C);
+            return A;
           })()),
         ]);
       }));
@@ -7194,20 +7224,26 @@ var Analysis = {
     console.log('view', rows, query);
     return m('.anal', [
       m('.pane.left', [
-        m('.vpane.upper', [
+        m('.editors', [
           m.component(BoardEditor, {
-            oninput: null,
+            board: ctrl.oboard(),
+            oninput: ctrl.oboard,
           }),
           m.component(BoardEditor, {
-            oninput: null,
+            board: ctrl.board(),
+            oninput: ctrl.board,
           }),
           m.component(PullEditor, {
-            cards: ctrl.pull(),
+            pull: ctrl.pull(),
             oninput: ctrl.pull,
           }),
         ]),
-        m('hr'),
-        m('div', [
+        m('button.analyze-btn', {
+          onclick: ctrl.resetAndStart,
+        }, 'Analyze!'),
+      ]),
+      m('.pane.right', [
+        m('.buttons', [
           m('button', {
             onclick: ctrl.startThinking,
           }, 'Start'),
@@ -7215,39 +7251,35 @@ var Analysis = {
             onclick: ctrl.stopThinking,
           }, 'Stop'),
         ]),
-        m('.vpane.lower', [
-          m('table', [
-            m('thead', m('tr', [
-                m('td', 'Score'),
-                m('td', 'Move'),
-                m('td', 'Royalty / FL / Foul'),
-                m('td', 'SD(score)'),
-            ])),
-            m('tbody',
-              rows.map(function(row) {
-                console.log('row: ', row);
-                var pending = [[], [], []];
-                row.play.forEach(function(idx, i) {
-                  if (idx == -1) return;
-                  pending[idx].push(query.pull[i]);
-                });
-                return m('tr', [
-                    m('td', makeS(row.S)),
-                    m('td.board-wrapper', makeBoard(query.board, {pending: pending})),
-                    m('td', makeStats(row.trials, row.rph, row.fl, row.foul)),
-                    m('td', row.SD.toFixed(2))
-                ]);
-              })
-            ),
-          ]),
+        m('table', [
+          m('thead', m('tr', [
+              m('td', 'Score'),
+              m('td', 'Move'),
+              m('td', 'Royalty / FL / Foul'),
+              m('td', 'SD(score)'),
+          ])),
+          m('tbody',
+            rows.map(function(row) {
+              console.log('row: ', row);
+              var pending = [[], [], []];
+              row.play.forEach(function(idx, i) {
+                if (idx == -1) return;
+                pending[idx].push(query.pull[i]);
+              });
+              return m('tr', [
+                  m('td', makeS(row.S)),
+                  m('td.board-wrapper', makeBoard(query.board, {pending: pending})),
+                  m('td', makeStats(row.trials, row.rph, row.fl, row.foul)),
+                  m('td', row.SD.toFixed(2))
+              ]);
+            })
+          ),
         ]),
-      ]),
-      m('.pane.right', [
-        // the selected guy, with details
-        // include graph representation of the board
-        // include "histogram" -- take top 3 most likely outcomes
-        // e.g. 30% Foul, 30% Kings, 20% Full House
-        // allow for more granularity  -- bucket on largest royalty by default
+      // the selected guy, with details
+      // include graph representation of the board
+      // include "histogram" -- take top 3 most likely outcomes
+      // e.g. 30% Foul, 30% Kings, 20% Full House
+      // allow for more granularity  -- bucket on largest royalty by default
       ]),
     ]);
   },
@@ -7488,19 +7520,29 @@ var CardEditor = {
 var BoardEditor = {
   controller: function(args) {
     args.oninput = args.oninput || U.nop;
+
     var rowSizes = [3, 5, 5];
-    this.board = rowSizes.map(function(sz) {
-      return U.range(sz).map(function() {
-        return m.prop('');
+    var cards = (args.board || [['', '', ''], ['', '', '', '', ''], ['', '', '', '', '']]).map(function(row) {
+      return row.map(function(card) {
+        return m.prop(card);
       });
     });
-    this.oninput = function() {
-      args.oninput(this.board);
+    var oninput = function() {
+      var board = cards.map(function(row) {
+        return row.map(function(card) {
+          return card();
+        });
+      });
+      args.oninput(board);
     };
+
+    this.cards = cards;
+    this.oninput = oninput;
   },
   view: function(ctrl, args) {
-    var board = ctrl.board;
-    return m('.editable.board', board.map(function(row) {
+    var cards = ctrl.cards;
+    console.log('boardeditor: view:', cards);
+    return m('.editable.board', cards.map(function(row) {
       return m('.row', [
         m('.cards', row.map(function(card) {
           return m.component(CardEditor, {
@@ -7516,23 +7558,33 @@ var BoardEditor = {
 var PullEditor = {
   controller: function(args) {
     args.oninput = args.oninput || U.nop;
-    this.row = (args.cards || ['', '', '']).map(function(card) {
+    var cards = (args.pull || ['', '', '']).map(function(card) {
       return m.prop(card);
     });
-    this.oninput = function() {
-      args.oninput(this.row);
+    var oninput = function() {
+      var pull = cards.map(function(card) {
+        return card();
+      });
+      args.oninput(pull);
     };
-    this.onplus = function() {
-      this.row.push(m.prop(''));
+    var onplus = function() {
+      cards.push(m.prop(''));
+      oninput();
     };
-    this.onminus = function() {
-      this.row.pop();
+    var onminus = function() {
+      cards.pop();
+      oninput();
     };
+
+    this.cards = cards;
+    this.oninput = oninput;
+    this.onplus = onplus;
+    this.onminus = onminus;
   },
   view: function(ctrl) {
-    var row = ctrl.row;
+    var cards = ctrl.cards;
     return m('.editable.pull', [
-      m('.row', row.map(function(card) {
+      m('.row', cards.map(function(card) {
         return m.component(CardEditor, {
           card: card,
           oninput: ctrl.oninput,
